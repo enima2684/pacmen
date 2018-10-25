@@ -45,7 +45,6 @@ function create ()
 
   // Add player
   player = this.physics.add.sprite(100, 450, 'dude');
-
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
 

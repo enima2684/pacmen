@@ -7,7 +7,8 @@ var config = {
   height: 500,
   fps: 30,
   physics:{
-    default: 'arcade'
+    default: 'arcade',
+    debug: false
   },
   scene: {
       preload: preload,
@@ -17,13 +18,6 @@ var config = {
 };
 
 var game = new Phaser.Game(config);
-
-// var Pacman = function(game){
-//
-//   this.map = nu
-//
-// };
-
 // Load the resources
 function preload() {
   this.load.image('dot', '../assets/img/dot.png');
@@ -31,39 +25,106 @@ function preload() {
   this.load.tilemapTiledJSON('map', '../assets/pacman-map.json');
   this.load.image('tiles', '../assets/img/pacman-tiles.png');
 
+
 }
 
 // Create the game objects
-function create(){
+function create() {
+
+  // params - Should be on a constructor funciton
+  this.speed = 150;
+  // this.safetile = 14;
 
   //  create the map
   this.map     = this.add.tilemap('map');
-  const tileset = this.map.addTilesetImage("pacman-tiles", "tiles");
-  this.map.createStaticLayer('Pacman', tileset, 0, 0);
+  var tileset  = this.map.addTilesetImage("pacman-tiles", "tiles");
+  var walls    = this.map.createStaticLayer('Pacman', tileset, 0, 0);
+
+
 
   // add spritesheet
-  this.pacman = this.add.sprite((14 * 16) + 8, (17 * 16) + 8, 'pacman', 0)
+  this.pacman = this.physics.add.sprite((14 * 16) + 8, (17 * 16) + 8, 'pacman');
+
+  // please pacman - do not go at infinity !
+  this.pacman.setCollideWorldBounds(true);
+
+  // please pacman - do not go through walls
+  // this.pacman.setCollisionByExclusion([this.safetile], true, this.map);
+  // this.physics.add.collider(this.pacman, tileset);
+  //
+  // this.map.setCollision([3], true);
+  // this.physics.world.collide(self.pacman, this.map, null, this);
+  // walls.setCollisionBetween(1, 50);
+  // this.physics.add.collider(this.pacman, this.map);
+  this.map.setCollisionByExclusion([this.safetile], true, this.layer);
+  this.physics.add.collider(this.pacman, walls);
+
 
   // animations
-  // this.cursors = this.input.keyboard.createCursorKeys();
-  //
-  // this.anims.create({
-  //     key: 'right',
-  //     frames: this.anims.generateFrameNumbers('pacman', { start: 0, end: 1 }), // TODO: change animation
-  //     frameRate: 10,
-  //     repeat: -1
-  // });
+  this.anims.create({
+      key: 'right',
+      frames: this.anims.generateFrameNumbers('pacman', { start: 0, end: 2 }), // TODO: change animation
+      frameRate: 10,
+      repeat: -1
+  });
 
+  this.anims.create({
+      key: 'left',
+      frames: this.anims.generateFrameNumbers('pacman', { start: 0, end: 2 }), // TODO: change animation
+      frameRate: 10,
+      repeat: -1
+  });
 
+  this.anims.create({
+      key: 'up',
+      frames: this.anims.generateFrameNumbers('pacman', { start: 0, end: 2 }), // TODO: change animation
+      frameRate: 10,
+      repeat: -1
+  });
+
+  this.anims.create({
+      key: 'down',
+      frames: this.anims.generateFrameNumbers('pacman', { start: 0, end: 2 }), // TODO: change animation
+      frameRate: 10,
+      repeat: -1
+  });
+
+  cursors = this.input.keyboard.createCursorKeys();
 }
 
 // Update the game objects
 function update(){
 
-  if (this.cursors.right.isDown)
-  {
-      this.pacman.setVelocityX(100);
-      this.pacman.anims.play('right', true);
+  // console.log(cursors.shift.isDown);
+  if (cursors.right.isDown){
+
+    console.log("RIGHT");
+    this.pacman.body.velocity.x = this.speed;
+    this.pacman.angle = 0;
+    this.pacman.anims.play('right', true);
   }
+
+  if (cursors.left.isDown)
+  {
+    this.pacman.body.velocity.x = -this.speed;
+    this.pacman.angle = 180;
+    this.pacman.anims.play('left', true);
+  }
+
+  if (cursors.down.isDown)
+  {
+    this.pacman.body.velocity.y = this.speed;
+    this.pacman.angle = 90;
+    this.pacman.anims.play('down', true);
+  }
+
+  if (cursors.up.isDown)
+  {
+    this.pacman.body.velocity.y = -this.speed;
+    this.pacman.angle = 270;
+    this.pacman.anims.play('up', true);
+  }
+
+
 
 }
