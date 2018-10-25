@@ -60,9 +60,7 @@ Pacman.prototype = {
         this.layer = this.map.createLayer('Pacman');
 
         this.dots = this.add.physicsGroup();
-
         this.map.createFromTiles(7, this.safetile, 'dot', this.layer, this.dots);
-
         //  The dots will need to be offset by 6px to put them back in the middle of the grid
         this.dots.setAll('x', 6, false, false, 1);
         this.dots.setAll('y', 6, false, false, 1);
