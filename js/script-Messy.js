@@ -1,5 +1,3 @@
-var tmp;
-
 var config = {
   title: "PacMen",
   parent: "game-screen", // id of the dom element containing the game
@@ -25,7 +23,6 @@ function preload() {
   this.load.spritesheet('pacman', '../assets/img/pacman.png', { frameWidth: 32, frameHeight: 32 });
   this.load.tilemapTiledJSON('map', '../assets/pacman-map.json');
   this.load.image('tiles', '../assets/img/pacman-tiles.png');
-  // this.load.spritesheet('ghost', '../assets/img/blinky.png', {frameWidth:16, frameHeight: 16});
   this.load.spritesheet('ghost', '../assets/img/pac_man_extended.png', {frameWidth:16, frameHeight: 16});
 
 }
@@ -106,7 +103,7 @@ function create() {
 
   this.ghosts = [];
   this.ghosts.push(
-    this.physics.add.sprite((17 * 16) + 8, (17 * 16) + 8, 'ghost')
+    this.physics.add.sprite((17 * 16) + 8, (20 * 16) + 8, 'ghost')
   );
 
   this.ghosts.forEach(ghost => {
