@@ -25,6 +25,8 @@ function preload() {
   this.load.spritesheet('pacman', '../assets/img/pacman.png', { frameWidth: 32, frameHeight: 32 });
   this.load.tilemapTiledJSON('map', '../assets/pacman-map.json');
   this.load.image('tiles', '../assets/img/pacman-tiles.png');
+  // this.load.spritesheet('ghost', '../assets/img/blinky.png', {frameWidth:16, frameHeight: 16});
+  this.load.spritesheet('ghost', '../assets/img/pac_man_extended.png', {frameWidth:16, frameHeight: 16});
 
 }
 
@@ -86,7 +88,6 @@ function create() {
 
 
   var dotPositions = getDotPositions();
-  console.log(dotPositions);
 
   this.dots = [];
   dotPositions
@@ -96,12 +97,68 @@ function create() {
   });
 
 
-  // this.dots.push(this.physics.add.sprite((0* 16) + 8, (0 * 16) + 8, 'dot'));
-
   this.dots.forEach(dot=>{
     this.physics.add.overlap(this.pacman, dot, eatDot, null, this);
   });
 
+  //---------------------------------------------------------------------------
+  // Add Ghosts
+
+  this.ghosts = [];
+  this.ghosts.push(
+    this.physics.add.sprite((17 * 16) + 8, (17 * 16) + 8, 'ghost')
+  );
+
+  this.ghosts.forEach(ghost => {
+    ghost.setScale(2);
+    ghost.setCollideWorldBounds(true);
+  });
+
+
+  // animations
+  this.anims.create({
+      key: 'ghostRight',
+      frames: this.anims.generateFrameNumbers('ghost', { start: 25, end: 25 }),
+      frameRate: 10,
+      repeat: -1
+  });
+
+  this.anims.create({
+      key: 'ghostLeft',
+      frames: this.anims.generateFrameNumbers('ghost', { start: 25, end: 25 }),
+      frameRate: 10,
+      repeat: -1
+  });
+
+  this.anims.create({
+      key: 'ghostUp',
+      frames: this.anims.generateFrameNumbers('ghost', { start: 25, end: 25 }),
+      frameRate: 10,
+      repeat: -1
+  });
+
+  this.anims.create({
+      key: 'ghostDown',
+      frames: this.anims.generateFrameNumbers('ghost', { start: 25, end: 25 }),
+      frameRate: 10,
+      repeat: -1
+  });
+
+  this.ghosts.forEach(ghost=>{
+    this.physics.add.overlap(ghost, this.pacman, ghostEatPacman, null, this);
+  });
+
+
+
+
+}
+
+
+function ghostEatPacman(ghost, pacman){
+
+  this.physics.pause();
+  pacman.setTint(0xff0000);
+  gameOver = true;
 }
 
 function getDotPositions(){
@@ -123,8 +180,6 @@ function update(){
   var downIsWall  = !inArray(downTile , this.safetiles);
   var rightIsWall = !inArray(rightTile, this.safetiles);
   var leftIsWall  = !inArray(leftTile , this.safetiles);
-
-  // console.log(currentTile);
 
   var currentDirection = getDirection(this.pacman.body.velocity.x, this.pacman.body.velocity.y);
   if (
@@ -170,6 +225,12 @@ function update(){
     this.pacman.anims.play('up', true);
   }
 
+  //---------------------------------------------------------------------------
+  // Ghost movement
+
+  this.ghosts[0].body.velocity.x = -100;
+  this.ghosts[0].anims.play('ghostLeft', true);
+
 }
 
 function inArray(e, arr){
@@ -196,6 +257,4 @@ function getDirection(vx, vy) {
 function eatDot(pacman, dot){
   dot.disableBody(true, true);
   score += 10;
-  // console.log(score);
-
 }
