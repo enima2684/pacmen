@@ -111,7 +111,6 @@ function create() {
     ghost.setCollideWorldBounds(true);
   });
 
-
   // animations
   this.anims.create({
       key: 'ghostRight',
@@ -230,9 +229,7 @@ function update(){
 
 }
 
-function inArray(e, arr){
-   return arr.indexOf(e) > -1
-}
+
 
 function getDirection(vx, vy) {
 
