@@ -18,21 +18,20 @@ class PacManScene extends Phaser.Scene{
       /****** Internal Objects ********/
       this.pacman;
       this.ghosts  = [];
+      this.dots  = [];
       this.cursors;
       this.score = 0;
   }
-
 
   /**
    * Load the ressources
    */
   preload(){
-    this.load.image('dot', '../assets/img/dot.png');
+    this.load.spritesheet('dot', '../assets/img/dot.png', { frameWidth: 4, frameHeight: 4 });
     this.load.spritesheet('pacman', '../assets/img/pacman.png', { frameWidth: 32, frameHeight: 32 });
     this.load.tilemapTiledJSON('map', '../assets/pacman-map.json');
     this.load.image('tiles', '../assets/img/pacman-tiles.png');
     this.load.spritesheet('ghost', '../assets/img/pac_man_extended.png', {frameWidth:16, frameHeight: 16});
-
   }
 
   /**
@@ -45,10 +44,13 @@ class PacManScene extends Phaser.Scene{
 
     this.createMap();
 
+    this.createDots();
+
     this.createPacMan();
 
     this.createGhosts();
 
+    this.setUpInterractionsBetweenCharacters()
   }
 
   /**
@@ -63,6 +65,40 @@ class PacManScene extends Phaser.Scene{
         ghost.update(this.pacman.getPosition());
       }
     );
+  }
+
+  /**
+   *
+   * @param character1
+   * @param character2
+   * @param callback : function that takes as o-input two insrtances of the character class
+   */
+  addPhysicsOverLap(character1, character2, callback){
+
+    this.physics.add.overlap(character1.phaserCharacter, character2.phaserCharacter,
+      (c1, c2)=>{return callback(c1.character, c2.character, this);},
+      null, this);
+  }
+
+
+  /**
+   * Sets up all interractions between the characters
+   * N.B : every call back function has to take the scene as a third parameter
+   */
+  setUpInterractionsBetweenCharacters(){
+
+    // PACMAN - GHOST
+    this.ghosts.forEach(
+      ghost => this.addPhysicsOverLap(ghost, this.pacman, this.ghostEatPacman)
+    );
+
+    // PACMAN - DOTS
+    // pacman eats a dot
+    this.dots.forEach(dot=>{
+      this.addPhysicsOverLap(this.pacman, dot, this.pacmanEatDot);
+    });
+
+
 
   }
 
@@ -75,14 +111,25 @@ class PacManScene extends Phaser.Scene{
     this.tileset  = this.map.addTilesetImage("pacman-tiles", "tiles");
     this.layer    = this.map.createStaticLayer('Pacman', this.tileset, 0, 0);
 
+  }
 
-    // add dots
+  /**
+   * Creates dots to eat
+   */
+  createDots(){
     var dotPositions = this.getDotPositions();
+    var initialPosition;
 
-    this.dots = [];
+    // Create the dots
+    // 3% of the dots created are super dots
     dotPositions.forEach( dotPosition => {
-       this.dots.push(this.physics.add.sprite((dotPosition.colIx * 16) + 8, (dotPosition.rowIx * 16) + 8, 'dot'));
+      initialPosition = [dotPosition["colIx"], dotPosition["rowIx"]];
+      this.dots.push(
+        new Dot(this, "dot", initialPosition, Math.random() < 0.02 ? "super" : "normal")
+      );
     });
+
+
   }
 
   /**
@@ -105,41 +152,128 @@ class PacManScene extends Phaser.Scene{
     // * create the character
     this.pacman = new Pacman(this, "pacmanPlayer", [14, 17]);
 
-
-    // add event handler when pacman eats a dot
-    this.dots.forEach(dot=>{
-      this.physics.add.overlap(this.pacman.phaserCharacter, dot, this.eatDot, null, this);
-    });
-
   }
 
 
   createGhosts(){
 
+    // Add ghosts here
     var ghostsToCreate = [
-      "blinky"
+      {
+        name: "blinky",
+        initialPosition: [18, 8]
+      },
+      {
+        name: "pinky",
+        initialPosition: [10, 8]
+      },
+      {
+        name: "inky",
+        initialPosition: [18, 22]
+      },
+      {
+        name: "clyde",
+        initialPosition: [10, 22]
+      },
     ];
 
-    // creata and populate the list of ghosts
+    // create and populate the list of ghosts
     ghostsToCreate.forEach(ghost => {
       this.ghosts.push(
-        new Ghost(this, ghost, [18, 14])
+        new Ghost(this, ghost.name, ghost.initialPosition)
       )
     });
 
-    // scale the ghosts
-    this.ghosts.forEach(ghost => {ghost.phaserCharacter.setScale(2);});
+    // // Ghost eat Pacman
+    // this.ghosts.forEach(ghost => {
+    //   this.physics.add.overlap(ghost.phaserCharacter, this.pacman.phaserCharacter, this.ghostEatPacman, null, this);
+    // });
+  }
+
+  /**
+   * Callback when a ghost eats pacman - also when pacman eats a ghost in afraid mode
+   * @param ghost
+   * @param pacman
+   * @param scene
+   */
+  ghostEatPacman(ghost, pacman, scene){
+
+    if(ghost.state === "normal"){
+      scene.physics.pause();
+      pacman.phaserCharacter.setTint(0xff0000);
+
+      // Pac man animation
+      var angle = 0;
+      setInterval(()=>{
+        angle += 90;
+        pacman.setAngle(angle);
+      }, 150)
+
+    }
+    else{
+
+      ghost.state = "dead";
+      clearTimeout(ghost.timeout);
+      ghost.timeout = setTimeout(()=>{
+        ghost.state = "normal";
+      }, 5000);
+      scene.score += 200;
+
+    }
+
 
   }
 
   /**
    * What happens when pacman eats a dot
-   * @param pacman
-   * @param dot
+   * @param pacman: charcarcter object
+   * @param dot: charcarcter object
+   * @param scene: scene we are working with
    */
-  eatDot(pacman, dot){
-    dot.disableBody(true, true);
-    this.score += 10;
+  pacmanEatDot(pacman, dot, scene){
+
+    dot.disable();
+    dot.isEaten = true;
+
+    scene.score += 10;
+
+    // if super dot, give super power
+    if(dot.typeDot === "super")
+    {
+      // super state
+      pacman.setColor(0xfd6a02); // TODO: to implment inside pacman
+
+      // all ghosts go in afraid mode
+      scene.ghosts.forEach(
+        ghost => {
+          ghost.state = "afraid";
+          ghost.invertDirection();
+        }
+      );
+
+      // come back to normal after a while
+      clearTimeout(pacman.timeout);
+      pacman.timeout = setTimeout(()=>{
+        pacman.resetColor();  // TODO: to implment inside pacman
+
+        // all ghosts alive come back to normal mode
+        scene.ghosts
+          .filter(ghost => {return ghost.state !== "dead"})
+          .forEach(ghost=> {ghost.state = "normal";});
+
+      }, 5000);
+
+    }
+
+
+    // if all dots are eaten, reborn all of them
+    var nbEatenDots = scene.dots.filter(dot => {return dot.isEaten;}).length;
+    if(nbEatenDots === scene.dots.length){
+      scene.dots =[];
+      scene.createDots();
+      scene.setUpInterractionsBetweenCharacters();
+    }
+
   }
 
 
@@ -165,10 +299,6 @@ class Character{
         throw new TypeError('Abstract class "Character" cannot be instantiated directly.');
     }
 
-    if (this.update === undefined) {
-        throw new TypeError('Classes extending the Character abstract class need to implement an update method');
-    }
-
     this.scene = scene;
     this.name = name;
     this.phaserCharacter = scene.physics.add.sprite((initialPosition[0] * 16) + 8, (initialPosition[1] * 16) + 8, characterType);
@@ -176,8 +306,31 @@ class Character{
     this.step = 8;
     this.movements = [];
 
+    // keep inside the phaser object a reference of the character object
+    this.phaserCharacter.character = this;
 
+  }
 
+  /**
+   * Disables the character and makes it disappear
+   */
+  disable(){
+    this.phaserCharacter.disableBody(true, true);
+  }
+
+  /**
+   * Changes the color of the character
+   * @param newColor : 0xffffff
+   */
+  setColor(newColor){
+    this.phaserCharacter.setTint(newColor);
+  }
+
+  /**
+   * Clears any given color and resets to the origin color
+   */
+  resetColor(){
+    this.phaserCharacter.clearTint();
   }
 
   setMovements(){
@@ -203,7 +356,6 @@ class Character{
           this.setVelocity([0, 0]);
         }
 
-      phaserCharacter.anims.play(this.name + '_move', true);
     };
     this.movements.push(keep);
 
@@ -218,7 +370,6 @@ class Character{
         0,
         (this.isWallAround()["up"])? 0 : -scene.speed
       ]);
-      phaserCharacter.anims.play(this.name + '_move', true);
     };
     this.movements.push(up);
 
@@ -233,7 +384,6 @@ class Character{
         0,
         (this.isWallAround()["down"])? 0 : scene.speed
       ]);
-      phaserCharacter.anims.play(this.name + '_move', true);
     };
     this.movements.push(down);
 
@@ -248,7 +398,6 @@ class Character{
         (this.isWallAround()["left"])? 0 : -scene.speed,
         0
       ]);
-      phaserCharacter.anims.play(this.name + '_move', true);
     };
     this.movements.push(left);
 
@@ -263,7 +412,6 @@ class Character{
         (this.isWallAround()["right"])? 0 : scene.speed,
         0
       ]);
-      phaserCharacter.anims.play(this.name + '_move', true);
     };
     this.movements.push(right);
   }
@@ -332,12 +480,21 @@ class Character{
       return "up";
     }
     return "nomove"
-    }
+  }
 
 
-    createAnimations(){
-      console.log("No animation configured for " + this.name);
-    }
+  createAnimations(){
+    console.log("No animation configured for " + this.name);
+  }
+
+  /**
+   * Invert the current direction of a character
+   */
+  invertDirection(){
+    this.setVelocity(
+      this.getVelocity().map(x=>x * (-1))
+    );
+  }
 
 
   update() {
@@ -360,6 +517,9 @@ class Pacman extends Character{
     super(scene, "pacman", name, initialPosition);
     this.createAnimations();
     this.setMovements();
+    this.timeout; // timeout triggered when become eating a super dot
+
+    this.phaserCharacter.setScale(0.9);
   }
 
 
@@ -383,6 +543,7 @@ class Pacman extends Character{
     movementUp.trigger = ()=>{return scene.cursors.up.isDown;};
     movementUp.action  = ()=>{
       movementUp.defaultAction();
+      this.phaserCharacter.anims.play(this.name + '_move', true);
       this.setAngle(270);
     };
 
@@ -394,6 +555,7 @@ class Pacman extends Character{
     movementDown.trigger = ()=>{return scene.cursors.down.isDown;};
     movementDown.action  = ()=>{
       movementDown.defaultAction();
+      this.phaserCharacter.anims.play(this.name + '_move', true);
       this.setAngle(90);
     };
 
@@ -405,6 +567,7 @@ class Pacman extends Character{
     movementRight.trigger = ()=>{return scene.cursors.right.isDown;};
     movementRight.action  = ()=>{
       movementRight.defaultAction();
+      this.phaserCharacter.anims.play(this.name + '_move', true);
       this.setAngle(0);
     };
 
@@ -416,6 +579,7 @@ class Pacman extends Character{
     movementLeft.trigger = ()=>{return scene.cursors.left.isDown;};
     movementLeft.action  = ()=>{
       movementLeft.defaultAction();
+      this.phaserCharacter.anims.play(this.name + '_move', true);
       this.setAngle(180);
     };
   }
@@ -442,6 +606,7 @@ class Pacman extends Character{
     this.phaserCharacter.angle = angle;
   }
 
+
 }
 
 
@@ -454,6 +619,15 @@ class Ghost extends Character{
     super(scene, "ghost", name, initialPosition);
     this.createAnimations();
     this.setMovements();
+    this.timeout;
+
+    this.phaserCharacter.setScale(1.8);
+
+    // state can be normal or afraid (when pacman eats a super dot)
+    // when state is afraid - the ghost runs away from pacman and it has a different animation
+    // when state is dead - the ghost takes some time to become as he was
+    this.state = "normal";
+
   }
 
 
@@ -462,40 +636,185 @@ class Ghost extends Character{
 
     //------------------------------------------------------------------------
     // KEEP
-    var movement = this.movements.filter(mov=>{return mov.direction === 'keep';})[0];
-    movement.trigger = ()=>{return false;}
+    var movementKeep = this.movements.filter(mov=>{return mov.direction === 'keep';})[0];
+    movementKeep.trigger = ()=>{return false;};
+    movementKeep.action = ()=>{
+      movementKeep.defaultAction();
+      if (this.state === "normal"){
+        // this.phaserCharacter.anims.play(this.name + '_move', true);
+      }
+      else if (this.state === "dead"){
+        this.phaserCharacter.anims.play(this.name + '_dead', true);
+      }
+      else{
+        // afraid - change animation
+        this.phaserCharacter.anims.play(this.name + '_afrai', true);
+      }
+
+    };
 
     //------------------------------------------------------------------------
     // UP
-    var movement = this.movements.filter(mov=>{return mov.direction === 'up';})[0];
-    movement.trigger = ()=>{return false;}
+    var movementUp = this.movements.filter(mov=>{return mov.direction === 'up';})[0];
+    movementUp.trigger = ()=>{return false;};
+    movementUp.action = ()=>{
+      movementUp.defaultAction();
+      if (this.state === "normal"){
+        this.phaserCharacter.anims.play(this.name + '_move_up', true);
+      }
+      else if (this.state === "dead"){
+        this.phaserCharacter.anims.play(this.name + '_dead', true);
+      }
+      else{
+        // afraid - change animation
+        this.phaserCharacter.anims.play(this.name + '_afraid', true);
+      }
+
+    };
 
 
     //------------------------------------------------------------------------
     // DOWN
-    var movement = this.movements.filter(mov=>{return mov.direction === 'down';})[0];
-    movement.trigger = ()=>{return false;}
+    var movementDown = this.movements.filter(mov=>{return mov.direction === 'down';})[0];
+    movementDown.trigger = ()=>{return false;};
+    movementDown.action = ()=>{
+      movementDown.defaultAction();
+      if (this.state === "normal"){
+        this.phaserCharacter.anims.play(this.name + '_move_down', true);
+      }
+      else if (this.state === "dead"){
+        this.phaserCharacter.anims.play(this.name + '_dead', true);
+      }
+      else{
+        // afraid - change animation
+        this.phaserCharacter.anims.play(this.name + '_afraid', true);
+      }
 
+    };
 
     //------------------------------------------------------------------------
     // LEFT
-    var movement = this.movements.filter(mov=>{return mov.direction === 'left';})[0];
-    movement.trigger = ()=>{return false;}
+    var movementLeft = this.movements.filter(mov=>{return mov.direction === 'left';})[0];
+    movementLeft.trigger = ()=>{return false;};
+    movementLeft.action = ()=>{
+      movementLeft.defaultAction();
+      if (this.state === "normal"){
+        this.phaserCharacter.anims.play(this.name + '_move_left', true);
+      }
+      else if (this.state === "dead"){
+        this.phaserCharacter.anims.play(this.name + '_dead', true);
+      }
+      else{
+        // afraid - change animation
+        this.phaserCharacter.anims.play(this.name + '_afraid', true);
+      }
 
+    };
 
     //------------------------------------------------------------------------
     // RIGHT
-    var movement = this.movements.filter(mov=>{return mov.direction === 'right';})[0];
-    movement.trigger = ()=>{return false;}
-
+    var movementRight = this.movements.filter(mov=>{return mov.direction === 'right';})[0];
+    movementRight.trigger = ()=>{return false;};
+    movementRight.action = ()=>{
+      movementRight.defaultAction();
+      if (this.state === "normal"){
+        this.phaserCharacter.anims.play(this.name + '_move_right', true);
+      }
+      else if (this.state === "dead"){
+        this.phaserCharacter.anims.play(this.name + '_dead', true);
+      }
+      else{
+        // afraid - change animation
+        this.phaserCharacter.anims.play(this.name + '_afraid', true);
+      }
+    };
   }
 
 
   createAnimations(){
+
+    var mappingAnimations = {
+      blinky:{
+        start:0,
+        end: 0
+      },
+      pinky:{
+        start:12,
+        end: 12
+      },
+      inky:{
+        start:24,
+        end: 24
+      },
+      clyde:{
+        start:36,
+        end: 36
+      }
+    };
+
+
+    function getAnimationGivenDirection(obj, direction){
+
+      var mapping = {
+        right: 0,
+        left: 1,
+        up: 2,
+        down: 3
+      };
+
+      return {
+        start: obj["start"] + 2 * mapping[direction],
+        end: obj["end"] + 2 * mapping[direction]
+      }
+
+    }
+
     // animations
     this.scene.anims.create({
-        key: this.name + '_move',
-        frames: this.scene.anims.generateFrameNumbers('ghost', { start: 25, end: 25 }),
+        key: this.name + '_move_up',
+        frames: this.scene.anims.generateFrameNumbers('ghost', getAnimationGivenDirection(mappingAnimations[this.name], "up" )),
+        frameRate: 10,
+        repeat: -1
+    });
+
+
+    this.scene.anims.create({
+        key: this.name + '_move_down',
+        frames: this.scene.anims.generateFrameNumbers('ghost', getAnimationGivenDirection(mappingAnimations[this.name], "down" )),
+        frameRate: 10,
+        repeat: -1
+    });
+
+
+    this.scene.anims.create({
+        key: this.name + '_move_left',
+        frames: this.scene.anims.generateFrameNumbers('ghost', getAnimationGivenDirection(mappingAnimations[this.name], "left" )),
+        frameRate: 10,
+        repeat: -1
+    });
+
+
+    this.scene.anims.create({
+        key: this.name + '_move_right',
+        frames: this.scene.anims.generateFrameNumbers('ghost', getAnimationGivenDirection(mappingAnimations[this.name], "right" )),
+        frameRate: 10,
+        repeat: -1
+    });
+
+
+
+    // afraid animation
+    this.scene.anims.create({
+        key: this.name + '_afraid',
+        frames: this.scene.anims.generateFrameNumbers('ghost', {start: 10, end: 10}),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    // dead animation
+      this.scene.anims.create({
+        key: this.name + '_dead',
+        frames: this.scene.anims.generateFrameNumbers('ghost', {start: 22, end: 22}),
         frameRate: 10,
         repeat: -1
     });
@@ -548,25 +867,38 @@ class Ghost extends Character{
     // 3. update the movements
     this.setMovementsToGoTo(directionToTake);
 
-
-
   }
+
 
   /**
    * Returns the direction to follow based on the absolute distances on the 2 axis
+   * When ghost affraid, chooses the opposite direction
    * @param distX
    * @param distY
    */
   getDirectionBasedOnDistance(distX, distY){
 
     if (Math.abs(distX) > Math.abs(distY)){
-      // we have to choose between right and left
-      return (distX > 0) ? "right" : "left";
+      // we have to choose between right and left in normal mode
+
+      if(this.state === "normal"){
+        return (distX > 0) ? "right" : "left";
+      }
+      else{
+        return (distX > 0) ? "left" : "right";
+      }
+
     }
     else {
       // we have to choose between up and down
-      return (distY > 0) ? "down" : "up";
+      if(this.state === "normal"){
+        return (distY > 0) ? "down" : "up";
+      }
+      else {
+        return (distY > 0) ? "up" : "down";
+      }
     }
+
 
   }
 
@@ -583,9 +915,35 @@ class Ghost extends Character{
 
 }
 
+/**
+ * Represents a dot to be eaten by pacman
+ */
+class Dot extends Character{
+
+  /**
+   *
+   * @param scene : scene object to work on
+   * @param name : name of the dot - should be 'dot'
+   * @param initialPosition : array of length 2
+   * @param type : "normal" or "super - super dots give super powers to pacman
+   */
+  constructor(scene, name, initialPosition, type){
+    super(scene, "dot", name, initialPosition);
+    this.typeDot = type;
+    this.isEaten = false;
+
+    if(this.typeDot === "super"){
+      this.phaserCharacter.setScale(2.25);
+    }
+
+  }
+
+  createAnimations(){}
+  setMovements(){}
+}
 
 /**
- * Class to represent a type of movement og a charchter.
+ * Class to represent a type of movement of a charchter.
  * A movement is defined by its trigger and by the action associated with it
  */
 class Movement{
@@ -624,6 +982,12 @@ function inArray(e, arr){
 
 TODO NEXT STEPS :
 
- - Ghost follow pacman
+
+
+ - Display Score
+ - Game Over when Ghost eats pacman
+ - Super Dot
+ - Adapt Ghost animation
+ - CSS
 
  */
