@@ -89,5 +89,52 @@ main .play-zone #score.animation {
   transition: 3s;
   color: #F9E500;
 }
+main .btn-zone {
+  margin-top: 15px;
+  font-size: 0.9rem;
+}
+
+[class*=push] {
+  position: relative;
+  display: inline-block;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  margin: 1em;
+  outline: none;
+  background-color: #F9E500;
+  background-image: url("../assets/img/dirty-yellow.png");
+  background-size: contain;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: box-shadow 200ms;
+}
+
+.push--flat {
+  color: black;
+  font-weight: 700;
+  box-shadow: inset 0 1.75px 0 #ffec14, inset 0 -1.75px 0 #e0ce00, inset 0 0 0 1.75px #ead700, inset 0 0 0 4.6666666667px #F9E500, inset 0 0 0 5.6px #938700, inset 0 0 0 6.0869565217px black, inset 0 0 0 7.4666666667px rgba(255, 246, 147, 0.7), inset 0 0 0 10.1818181818px #F9E500, inset 0 22.4px 7.4666666667px #e0ce00, inset 0 0 5.6px 9.3333333333px #c6b600, 0 2.8px 0 rgba(0, 0, 0, 0.3);
+}
+.push--flat:after {
+  content: "";
+  position: absolute;
+  bottom: 2.8px;
+  left: 5.6px;
+  display: block;
+  width: 44.8px;
+  height: 44.8px;
+  border: 3.7333333333px solid rgba(0, 0, 0, 0.3);
+  border-width: 0 0 3.7333333333px;
+  border-radius: 50%;
+  transition-duration: 200ms;
+}
+.push--flat:active, .push--flat.is-pushed {
+  box-shadow: inset 0 1.75px 0 #ffec14, inset 0 -1.75px 0 #e0ce00, inset 0 0 0 1.75px #ead700, inset 0 0 0 4.6666666667px #F9E500, inset 0 0 0 5.6px #938700, inset 0 0 0 6.5882352941px #2d2900, inset 0 0 0 7.4666666667px rgba(255, 246, 147, 0.2), inset 0 0 0 10.1818181818px #ead700, inset 0 22.4px 7.4666666667px #d0bf00, inset 0 0 5.6px 9.3333333333px #ad9f00, 0 2.8px 0 rgba(0, 0, 0, 0.3);
+  background-color: #efdc00;
+}
+.push--flat:active:after, .push--flat.is-pushed:after {
+  bottom: 6.5333333333px;
+  border-width: 0;
+}
 
 /*# sourceMappingURL=styles.css.map */
