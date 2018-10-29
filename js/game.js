@@ -6,8 +6,9 @@ class PacManScene extends Phaser.Scene{
    *
    * @param speed of the characters on the map
    * @param safetiles : indexes of the safe tiles ie not walls
+   * #param gameDuration: in minutes
    */
-  constructor(speed, safetiles){
+  constructor(speed, safetiles, gameDuration){
       super();
 
       /******** PARAMS *******************/
@@ -22,6 +23,11 @@ class PacManScene extends Phaser.Scene{
       this.cursors;
       this.score = 0;
       this.scoreText;
+      this.startingTime;
+      this.endingTime;
+      this.gameDuration = gameDuration;
+
+
   }
 
   /**
@@ -43,6 +49,11 @@ class PacManScene extends Phaser.Scene{
     // Create a cursor to take control of the character
     this.cursors = this.input.keyboard.createCursorKeys();
 
+    // init scores
+    this.score = 0;
+    this.startingTime = new Date().getTime();
+    this.endingTime = this.startingTime + this.gameDuration * 60000;
+
     this.createMap();
 
     this.createDots();
@@ -52,6 +63,7 @@ class PacManScene extends Phaser.Scene{
     this.createGhosts();
 
     this.setUpInterractionsBetweenCharacters()
+
   }
 
   /**
@@ -59,20 +71,87 @@ class PacManScene extends Phaser.Scene{
    */
   update(){
 
+    // update pacman
     this.pacman.update();
 
+    // update ghosts
     this.ghosts.forEach(
       ghost=>{
         ghost.update(this.pacman.getPosition());
       }
     );
 
-
     // update score
     $("#score").html(this.score);
-    // this.scoreText.setText(this.score);
+
+    // update timer
+    this.updateTimer();
+
+    // is the game over ?
+    if (this.isGameOver())
+    {
+      this.doWhenGameIsOver();
+    }
+
+  }
+
+  /**
+   * What to do when the game is over
+   */
+  doWhenGameIsOver(){
+    this.physics.pause();
+    this.pacman.phaserCharacter.setTint(0xff0000);// Pac man animation
+
+    // Pac man animation
+    var angle = 0;
+    setInterval(()=>{
+      angle += 90;
+      this.pacman.setAngle(angle);
+    }, 100)
+  }
+
+  replay(){
+
+    this.pacman = undefined;
+    this.dots = [];
+    this.ghosts = [];
+
+    this.create();
 
 
+  }
+
+  /** updates the game timer **/
+  updateTimer(){
+    var now = new Date().getTime();
+    var distance = this.endingTime - now;
+    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    if (distance > 0){
+
+      // update dom
+      $("#rem-time").html(
+        ((minutes<10) ? ('0' + minutes) : minutes )+
+        ":"+
+        ((seconds<10) ? ('0' + seconds) : seconds )
+      );
+
+      if( minutes === 0 && seconds < 10){
+        $("#rem-time").css('color', 'red');
+      }
+
+    }
+
+    return distance
+  }
+
+  /**
+   * Returns true if the game is over
+   */
+  isGameOver(){
+    var remainingTime = this.updateTimer();
+    return remainingTime <= 0;
   }
 
   /**
@@ -101,7 +180,6 @@ class PacManScene extends Phaser.Scene{
     );
 
     // PACMAN - DOTS
-    // pacman eats a dot
     this.dots.forEach(dot=>{
       this.addPhysicsOverLap(this.pacman, dot, this.pacmanEatDot);
     });
@@ -211,15 +289,10 @@ class PacManScene extends Phaser.Scene{
 
     if(ghost.state === "normal"){
       // ghost eat pacman
-      scene.physics.pause();
-      pacman.phaserCharacter.setTint(0xff0000);
+      if(pacman.state !== "dead"){
+        pacman.resetWhenEaten();
+      }
 
-      // Pac man animation
-      var angle = 0;
-      setInterval(()=>{
-        angle += 90;
-        pacman.setAngle(angle);
-      }, 150)
 
     }
     else{
@@ -273,7 +346,6 @@ class PacManScene extends Phaser.Scene{
           .forEach(ghost=> {ghost.state = "normal";});
 
       }, 5000);
-
     }
 
 
@@ -316,6 +388,7 @@ class Character{
     this.phaserCharacter.setCollideWorldBounds(true);
     this.step = 8;
     this.movements = [];
+    this.initialPosition = initialPosition;
 
     // keep inside the phaser object a reference of the character object
     this.phaserCharacter.character = this;
@@ -342,6 +415,13 @@ class Character{
    */
   resetColor(){
     this.phaserCharacter.clearTint();
+  }
+
+  // moves the character to the desired position
+  setPosition(position){
+    this.phaserCharacter.x = position[0] * 16 + 8;
+    this.phaserCharacter.y = position[1] * 16 + 6;
+
   }
 
   setMovements(){
@@ -617,6 +697,46 @@ class Pacman extends Character{
     this.phaserCharacter.angle = angle;
   }
 
+  /**
+   * Executed when pacman is eaten by a ghost
+   */
+  resetWhenEaten(){
+
+    this.state = "dead";
+
+    // 0. stop movement
+    this.setVelocity([0, 0]);
+
+    // 1. paralyze
+    var movements = this.movements.slice(0);
+    this.movements = [];
+
+    // 2. color in red
+    this.setColor("0xff0000");
+
+    // 3. rotate animation
+    var angle = 0;
+    var timer = setInterval(()=>{
+      angle += 90;
+      this.setAngle(angle);
+    }, 100);
+
+    // 4. reposition at start position after 5 s
+    setTimeout(()=>{
+
+      clearInterval(timer);
+      this.setPosition(this.initialPosition);
+
+      // give back movement
+      this.movements = movements.slice(0);
+
+      // reset color
+      this.resetColor();
+
+      // reset state
+      this.state = "normal";
+      },5000);
+  }
 
 }
 
