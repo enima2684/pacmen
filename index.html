@@ -6,9 +6,8 @@
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>PacMen !</title>
-
   <link rel="stylesheet" href="css/styles.css">
-  
+
   <script src="assets/phaser-3.15.1/dist/phaser.js"></script>
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"
           integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
@@ -19,17 +18,72 @@
 </head>
 <body>
 
-<h3>Random Number : <span></span></h3>
 
-<div id="game-screen">
+<nav>
+  
+  <div class="nav-left">
+    <img src="assets/img/Pac-man-logo.gif" alt="">
+  </div>
 
-</div>
+  <div class="nav-right">
+    <ul>
+      <li><a href="#0">Home</a></li>
+      <li><a href="#0">SoloPlayer</a></li>
+      <li><a href="#0">MultiPlayer Offline</a></li>
+      <li><a href="#0">Multiplayer Online</a></li>
+    </ul>
+  </div>
+
+</nav>
+
+
+<header>
+  <img src="assets/img/ghosts-sm.png" alt="">
+</header>
+
+
+<main>
+
+  <div class="play-zone">
+
+    <div class="metrics">
+      <div class="timer-zone">
+
+        <span>Time : </span>
+        <span id="rem-time">03:00</span>
+
+      </div>
+
+      <div class="score-zone">
+        <span>Score : </span>
+        <span id="score"></span>
+      </div>
+    </div>
+
+    <div id="game-screen"></div>
+
+  </div>
+
+  <div class="btn-zone">
+
+    <button> Replay </button>
+
+  </div>
+
+
+</main>
 
 
 
-<!--<script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>-->
 
-<script> document.querySelector("h3 span").innerHTML = Math.random().toFixed(3);</script>
+
+
+
+
+
+
+
+
 <script type="text/javascript" src="assets/dot-positions.json"></script>
 <script src="js/game.js"></script>
 <script src="js/main.js"></script>

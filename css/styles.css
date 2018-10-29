@@ -1,10 +1,93 @@
+@font-face {
+  font-family: "arcadeFont";
+  src: url("../assets/fonts/ARCADE_N.TTF");
+}
+@font-face {
+  font-family: "pacmanFont";
+  src: url("../assets/fonts/PAC-FONT.TTF");
+}
 body {
-  margin: 0;
-  background-color: lightgray;
+  background-image: url("../assets/img/bg.png");
+  background-size: inherit;
+  background-repeat: no-repeat;
+  color: white;
+  font-family: "pacmanFont";
+  margin: 0 7%;
 }
 
-#game-screen {
-  margin: 100px;
+nav {
+  padding: 10px 0;
+  width: 100%;
+  max-width: 1250px;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+nav .nav-left {
+  height: 100%;
+  margin-right: 5%;
+}
+nav .nav-left img {
+  height: 90%;
+}
+nav .nav-right {
+  margin-left: 5%;
+  flex-grow: 1;
+}
+nav .nav-right ul {
+  padding: 0;
+  list-style-type: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+nav .nav-right ul li {
+  height: 100%;
+  cursor: pointer;
+}
+nav .nav-right ul li a {
+  color: inherit;
+  text-decoration: none;
+}
+nav .nav-right ul li:hover {
+  color: #F9E500;
+}
+
+header {
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+header img {
+  width: 30%;
+  opacity: 0.85;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "arcadeFont";
+}
+main .play-zone {
+  margin: 20px auto;
+}
+main .play-zone .metrics {
+  display: flex;
+  justify-content: space-around;
+  padding: 5% 0;
+}
+main .play-zone #score.animation {
+  -webkit-transition: 3s;
+  -moz-transition: 3s;
+  -ms-transition: 3s;
+  -o-transition: 3s;
+  transition: 3s;
+  color: #F9E500;
 }
 
 /*# sourceMappingURL=styles.css.map */

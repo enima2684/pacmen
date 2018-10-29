@@ -21,6 +21,7 @@ class PacManScene extends Phaser.Scene{
       this.dots  = [];
       this.cursors;
       this.score = 0;
+      this.scoreText;
   }
 
   /**
@@ -65,6 +66,13 @@ class PacManScene extends Phaser.Scene{
         ghost.update(this.pacman.getPosition());
       }
     );
+
+
+    // update score
+    $("#score").html(this.score);
+    // this.scoreText.setText(this.score);
+
+
   }
 
   /**
@@ -107,9 +115,11 @@ class PacManScene extends Phaser.Scene{
    * Creates the map - should be called inside create method
    */
   createMap(){
-    this.map     = this.make.tilemap({ key: 'map' });
-    this.tileset  = this.map.addTilesetImage("pacman-tiles", "tiles");
-    this.layer    = this.map.createStaticLayer('Pacman', this.tileset, 0, 0);
+    this.map       = this.make.tilemap({ key: 'map' });
+    this.tileset   = this.map.addTilesetImage("pacman-tiles", "tiles");
+    this.layer     = this.map.createStaticLayer('Pacman', this.tileset, 0, 0);
+    // this.scoreText = this.add.text(215, 225, '0', { fontSize: '18px', fill: '#FFB897' });
+
 
   }
 
@@ -175,6 +185,7 @@ class PacManScene extends Phaser.Scene{
         name: "clyde",
         initialPosition: [10, 22]
       },
+
     ];
 
     // create and populate the list of ghosts
@@ -199,6 +210,7 @@ class PacManScene extends Phaser.Scene{
   ghostEatPacman(ghost, pacman, scene){
 
     if(ghost.state === "normal"){
+      // ghost eat pacman
       scene.physics.pause();
       pacman.phaserCharacter.setTint(0xff0000);
 
@@ -211,14 +223,13 @@ class PacManScene extends Phaser.Scene{
 
     }
     else{
-
+      // pacman eats ghost
       ghost.state = "dead";
       clearTimeout(ghost.timeout);
       ghost.timeout = setTimeout(()=>{
         ghost.state = "normal";
       }, 5000);
-      scene.score += 200;
-
+      scene.score += 10;
     }
 
 

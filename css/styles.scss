@@ -1,8 +1,142 @@
-body{
-  margin: 0;
-  background-color: lightgray;
+$color-yellow : #F9E500;
+$score-color-transition-time: 3s;
+
+@font-face {
+  font-family: 'arcadeFont';
+  src: url('../assets/fonts/ARCADE_N.TTF');
 }
 
-#game-screen{
-  margin: 100px;
+@font-face {
+  font-family: 'pacmanFont';
+  src: url('../assets/fonts/PAC-FONT.TTF')
 }
+
+
+
+body{
+  //background-color: lightgray;
+  background-image: url("../assets/img/bg.png");
+  background-size: inherit;
+  //-webkit-background-size: cover;
+  //-moz-background-size: cover;
+  //-o-background-size: cover;
+  background-repeat: no-repeat;
+  color: white;
+  font-family: 'pacmanFont';
+
+  margin: 0 7%;
+}
+
+
+nav{
+
+  padding: 10px 0;
+  width: 100%;
+  max-width: 1250px;
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+
+  .nav-left{
+
+    height: 100%;
+    img{
+      height: 90%;
+    }
+
+    margin-right: 5%;
+
+  }
+
+
+  .nav-right{
+    margin-left: 5%;
+    flex-grow: 1;
+    ul{
+      padding: 0;
+      list-style-type: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+
+      li{
+        height: 100%;
+        cursor: pointer;
+
+        a{
+          color: inherit;
+          text-decoration: none;
+        }
+      }
+
+      li:hover{
+        color: $color-yellow;
+      }
+    }
+
+  }
+
+
+
+}
+
+header{
+
+  margin: 20px auto;
+  //height: 5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img{
+    //height: 100%;
+    width: 30%;
+    opacity: 0.85;
+  }
+}
+
+
+main{
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'arcadeFont';
+
+  .play-zone{
+    margin: 20px auto;
+
+    .metrics{
+      display: flex;
+      justify-content: space-around;
+      padding: 5% 0;
+    }
+
+    #score.animation{
+      -webkit-transition: $score-color-transition-time;
+      -moz-transition: $score-color-transition-time;
+      -ms-transition: $score-color-transition-time;
+      -o-transition: $score-color-transition-time;
+      transition: $score-color-transition-time;
+      color: $color-yellow;
+
+
+    }
+
+
+
+  }
+
+}
+
+
+
+
+
+
+
+
