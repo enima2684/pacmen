@@ -110,27 +110,60 @@ main{
   align-items: center;
   font-family: 'arcadeFont';
 
-  .play-zone{
-    margin: 20px auto;
+  .upper-section{
 
-    .metrics{
-      display: flex;
-      justify-content: space-around;
-      padding: 5% 0;
+    display: flex;
+    flex-grow: 1;
+
+    .play-zone{
+      margin: 20px auto;
+
+      .metrics{
+        display: flex;
+        justify-content: space-around;
+        padding: 5% 0;
+      }
+
+      #score.animation{
+        -webkit-transition: $score-color-transition-time;
+        -moz-transition: $score-color-transition-time;
+        -ms-transition: $score-color-transition-time;
+        -o-transition: $score-color-transition-time;
+        transition: $score-color-transition-time;
+        color: $color-yellow;
+      }
+
     }
 
-    #score.animation{
-      -webkit-transition: $score-color-transition-time;
-      -moz-transition: $score-color-transition-time;
-      -ms-transition: $score-color-transition-time;
-      -o-transition: $score-color-transition-time;
-      transition: $score-color-transition-time;
-      color: $color-yellow;
+    .right-zone{
+      padding-left: 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+
+      >div{
+        margin-top: 30px;
+      }
+
+      ul{
+        padding: 40px 0;
+        list-style-type: none;
+        li{
+          padding: 10% 0;
+        }
+
+      }
+    }
+
+    .left-zone{
+      width: 250px;
     }
 
   }
 
-  .btn-zone{
+
+  .lower-section{
     margin-top: 15px;
     font-size: 0.9rem;
   }

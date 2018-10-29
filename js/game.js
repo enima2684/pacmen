@@ -15,13 +15,11 @@ class PacManScene extends Phaser.Scene{
       this.speed = speed;
       this.safetiles = safetiles;
 
-
       /****** Internal Objects ********/
       this.ghosts  = [];
       this.dots  = [];
       this.players = []
       this.cursors;
-      this.score;
       this.startingTime;
       this.endingTime;
       this.gameDuration = gameDuration;
@@ -45,7 +43,6 @@ class PacManScene extends Phaser.Scene{
   create(){
 
     // init scores
-    this.score = 0;
     this.startingTime = new Date().getTime();
     this.endingTime = this.startingTime + this.gameDuration * 60000;
 
@@ -72,7 +69,6 @@ class PacManScene extends Phaser.Scene{
     this.cursors = this.input.keyboard.createCursorKeys();
 
     // add keys for second player
-
     this.cursors["z"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     this.cursors["q"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.cursors["s"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
@@ -90,17 +86,12 @@ class PacManScene extends Phaser.Scene{
     });
 
     // update ghosts
-    // TODO: review priorities
     this.ghosts.forEach(
-      ghost=>{
-        this.players.forEach(pacman=>{
-          ghost.update(pacman.getPosition());
-        });
-      }
+      ghost=>{ghost.update(ghost.targetPacman.getPosition());}
     );
 
     // update score
-    $("#score").html(this.score);
+    this.updateScoreInDom();
 
     // update timer
     this.updateTimer();
@@ -110,6 +101,22 @@ class PacManScene extends Phaser.Scene{
     {
       this.doWhenGameIsOver();
     }
+
+  }
+
+  /**
+   * Updates the score in the DOM
+   */
+  updateScoreInDom(){
+
+    $("#scores").empty();
+
+    this.players.sort( (p1, p2) => {
+      return p2.score - p1.score;
+    }).forEach(pacman => {
+      var innerHTML = "<li>" + pacman.name + " : " + pacman.score + "</li>";
+      $("#scores").append(innerHTML)
+    });
 
   }
 
@@ -130,13 +137,13 @@ class PacManScene extends Phaser.Scene{
 
   replay(){
 
-    this.pacman = undefined;
+    this.players = [];
     this.dots = [];
     this.ghosts = [];
 
     this.create();
     this.physics.play();
-
+    $("#scores").empty();
 
   }
 
@@ -193,15 +200,8 @@ class PacManScene extends Phaser.Scene{
    */
   setUpInterractionsBetweenCharacters(){
 
-    // PACMAN - GHOST
-    this.ghosts.forEach(
-      ghost => {
-        this.players.forEach(pacman => {
-          this.addPhysicsOverLap(ghost, pacman, this.ghostEatPacman)
-        });
-      }
-    );
 
+    //-------------------------------------------------------------------
     // PACMAN - DOTS
     this.dots.forEach(dot=>{
       this.players.forEach(pacman => {
@@ -210,6 +210,36 @@ class PacManScene extends Phaser.Scene{
     });
 
 
+    //-------------------------------------------------------------------
+    // PACMAN - GHOST
+
+    // when eating
+    this.ghosts.forEach(
+      ghost => {
+        this.players.forEach(pacman => {
+          this.addPhysicsOverLap(ghost, pacman, this.ghostEatPacman)
+        });
+      }
+    );
+
+    // who to track ?
+    this.ghosts.forEach(ghost => {
+      ghost.targetPacman = this.players[ Math.floor(this.players.length * Math.random())];
+      ghost.targetPacmanTimeout = setInterval(()=>{
+        // pick a random pacman and define it as a target
+        ghost.targetPacman = this.players[ Math.floor(this.players.length * Math.random())];
+        }, 30000);
+    });
+
+    //-------------------------------------------------------------------
+    // PACMAN - PACMAN
+    this.players.forEach(pacman1 => {
+      this.players.filter((p) => {return p !== pacman1;}).forEach(
+        pacman2 => {
+          this.addPhysicsOverLap(pacman1, pacman2, this.pacmanEatPacman)
+        }
+      );
+    });
 
   }
 
@@ -283,7 +313,7 @@ class PacManScene extends Phaser.Scene{
         down : ()=>{return this.cursors["s"].isDown}
       };
     var player2Color = 0x00FFF4;
-    var player2 = new Pacman(this, "player1", [13, 17], player2Controls, player2Color);
+    var player2 = new Pacman(this, "player2", [13, 17], player2Controls, player2Color);
     this.players.push(player2);
 
   }
@@ -319,10 +349,26 @@ class PacManScene extends Phaser.Scene{
       )
     });
 
-    // // Ghost eat Pacman
-    // this.ghosts.forEach(ghost => {
-    //   this.physics.add.overlap(ghost.phaserCharacter, this.pacman.phaserCharacter, this.ghostEatPacman, null, this);
-    // });
+  }
+
+
+  /**
+   * Callback when a pacman eats another one
+   * @param pacman1
+   * @param pacman2
+   * @param scene
+   */
+  pacmanEatPacman(pacman1, pacman2, scene){
+
+    if(pacman1.state === "super" && pacman2.state === "normal"){
+      pacman1.score += 500;
+      pacman2.resetWhenEaten();
+    }
+    else if (pacman2.state === "super" && pacman1.state === "normal"){
+      pacman2.score += 500;
+      pacman1.resetWhenEaten();
+    }
+
   }
 
   /**
@@ -333,25 +379,23 @@ class PacManScene extends Phaser.Scene{
    */
   ghostEatPacman(ghost, pacman, scene){
 
-    if(ghost.state === "normal"){
+    if(ghost.state === "normal" && pacman.state === "normal"){
       // ghost eat pacman
-      if(pacman.state !== "dead"){
-        pacman.resetWhenEaten();
-      }
-
-
+      pacman.resetWhenEaten();
     }
-    else{
+    else if (ghost.state === "afraid" && pacman.state === "super"){
       // pacman eats ghost
+      // only eats ghost if in super state
+
+      console.log("Pacman eats ghost");
+
       ghost.state = "dead";
-      clearTimeout(ghost.timeout);
-      ghost.timeout = setTimeout(()=>{
+      clearTimeout(ghost.deathTimeout);
+      ghost.deathTimeout = setTimeout(()=>{
         ghost.state = "normal";
       }, 5000);
-      scene.score += 10;
+      pacman.score += 200;
     }
-
-
   }
 
   /**
@@ -365,13 +409,14 @@ class PacManScene extends Phaser.Scene{
     dot.disable();
     dot.isEaten = true;
 
-    scene.score += 10;
+    pacman.score += 10;
 
     // if super dot, give super power
     if(dot.typeDot === "super")
     {
       // super state
       pacman.setColor(0xfd6a02); // TODO: to implment inside pacman
+      pacman.state = "super";
 
       // all ghosts go in afraid mode
       scene.ghosts.forEach(
@@ -385,6 +430,7 @@ class PacManScene extends Phaser.Scene{
       clearTimeout(pacman.timeout);
       pacman.timeout = setTimeout(()=>{
         pacman.resetColor();  // TODO: to implment inside pacman
+        pacman.state = "normal";
 
         // all ghosts alive come back to normal mode
         scene.ghosts
@@ -662,6 +708,8 @@ class Pacman extends Character{
     this.controls = controls;
     this.timeout; // timeout triggered when eating a super dot
     this.color = color;
+    this.score = 0;
+    this.state = "normal";
 
     this.setColor(color);
     this.createAnimations();
@@ -778,6 +826,9 @@ class Pacman extends Character{
       this.setAngle(angle);
     }, 100);
 
+    // 4. update score
+    this.score -= 300;
+
     // 4. reposition at start position after 5 s
     setTimeout(()=>{
 
@@ -792,6 +843,7 @@ class Pacman extends Character{
 
       // reset state
       this.state = "normal";
+
       },5000);
   }
 
@@ -807,7 +859,9 @@ class Ghost extends Character{
     super(scene, "ghost", name, initialPosition);
     this.createAnimations();
     this.setMovements();
-    this.timeout;
+    this.deathTimeout;  // timeout when death
+    this.targetPacman; // Pacman followed for at least 30s
+    this.targetPacmanTimeout; // timeout to change the followed pacman
 
     this.phaserCharacter.setScale(1.8);
 
@@ -1124,7 +1178,6 @@ class Dot extends Character{
       this.phaserCharacter.setScale(2.25);
       this.setColor(0xE0CE00);
     }
-
   }
 
   createAnimations(){}

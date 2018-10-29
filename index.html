@@ -44,27 +44,39 @@
 
 <main>
 
-  <div class="play-zone">
+  <div class="upper-section">
 
-    <div class="metrics">
-      <div class="timer-zone">
+    <div class="left-zone"></div>
 
-        <span>Time : </span>
-        <span id="rem-time">03:00</span>
+    <div class="play-zone">
 
+      <div class="metrics">
+        <div class="timer-zone">
+
+          <span>Time : </span>
+          <span id="rem-time">02:00</span>
+
+        </div>
       </div>
 
-      <div class="score-zone">
-        <span>Score : </span>
-        <span id="score"></span>
-      </div>
+      <div id="game-screen"></div>
+
     </div>
 
-    <div id="game-screen"></div>
+    <div class="right-zone">
+
+      <div>Scores</div>
+      <ul id="scores">
+        <li>Player 1 : 540</li>
+        <li>Player 2 : 320</li>
+      </ul>
+
+    </div>
 
   </div>
 
-  <div class="btn-zone">
+
+  <div class="lower-section">
 
     <div>Replay</div>
     <button id="btn-replay" class="push--flat"></button>

@@ -73,15 +73,19 @@ main {
   align-items: center;
   font-family: "arcadeFont";
 }
-main .play-zone {
+main .upper-section {
+  display: flex;
+  flex-grow: 1;
+}
+main .upper-section .play-zone {
   margin: 20px auto;
 }
-main .play-zone .metrics {
+main .upper-section .play-zone .metrics {
   display: flex;
   justify-content: space-around;
   padding: 5% 0;
 }
-main .play-zone #score.animation {
+main .upper-section .play-zone #score.animation {
   -webkit-transition: 3s;
   -moz-transition: 3s;
   -ms-transition: 3s;
@@ -89,7 +93,27 @@ main .play-zone #score.animation {
   transition: 3s;
   color: #F9E500;
 }
-main .btn-zone {
+main .upper-section .right-zone {
+  padding-left: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+main .upper-section .right-zone > div {
+  margin-top: 30px;
+}
+main .upper-section .right-zone ul {
+  padding: 40px 0;
+  list-style-type: none;
+}
+main .upper-section .right-zone ul li {
+  padding: 10% 0;
+}
+main .upper-section .left-zone {
+  width: 250px;
+}
+main .lower-section {
   margin-top: 15px;
   font-size: 0.9rem;
 }
