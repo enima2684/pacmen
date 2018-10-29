@@ -21,12 +21,10 @@ class PacManScene extends Phaser.Scene{
       this.ghosts  = [];
       this.dots  = [];
       this.cursors;
-      this.score = 0;
-      this.scoreText;
+      this.score;
       this.startingTime;
       this.endingTime;
       this.gameDuration = gameDuration;
-
 
   }
 
@@ -46,13 +44,13 @@ class PacManScene extends Phaser.Scene{
    */
   create(){
 
-    // Create a cursor to take control of the character
-    this.cursors = this.input.keyboard.createCursorKeys();
-
     // init scores
     this.score = 0;
     this.startingTime = new Date().getTime();
     this.endingTime = this.startingTime + this.gameDuration * 60000;
+
+    // Create a cursor to take control of the character
+    this.cursors = this.input.keyboard.createCursorKeys();
 
     this.createMap();
 
@@ -196,7 +194,6 @@ class PacManScene extends Phaser.Scene{
     this.map       = this.make.tilemap({ key: 'map' });
     this.tileset   = this.map.addTilesetImage("pacman-tiles", "tiles");
     this.layer     = this.map.createStaticLayer('Pacman', this.tileset, 0, 0);
-    // this.scoreText = this.add.text(215, 225, '0', { fontSize: '18px', fill: '#FFB897' });
 
 
   }
@@ -238,7 +235,13 @@ class PacManScene extends Phaser.Scene{
   createPacMan(){
 
     // * create the character
-    this.pacman = new Pacman(this, "pacmanPlayer", [14, 17]);
+    var controls = {
+      right: ()=>{return this.cursors.right.isDown},
+      left : ()=>{return this.cursors.left.isDown},
+      up   : ()=>{return this.cursors.up.isDown},
+      down : ()=>{return this.cursors.down.isDown}
+    };
+    this.pacman = new Pacman(this, "me", [14, 17], controls);
 
   }
 
@@ -604,11 +607,20 @@ class Character{
 /** Pacman character **/
 class Pacman extends Character{
 
-  constructor(scene, name, initialPosition){
+  /**
+   *
+   * @param scene
+   * @param name
+   * @param initialPosition
+   * @param controls : obj that specifies what controls are used to trigger every control - it is an obj {right: trigger, left: trigger, ...}
+   */
+  constructor(scene, name, initialPosition, controls){
     super(scene, "pacman", name, initialPosition);
+    this.controls = controls;
+    this.timeout; // timeout triggered when eating a super dot
+
     this.createAnimations();
     this.setMovements();
-    this.timeout; // timeout triggered when become eating a super dot
 
     this.phaserCharacter.setScale(0.9);
   }
@@ -631,7 +643,7 @@ class Pacman extends Character{
 
     /* trigger */
     var movementUp = this.movements.filter(mov => {return mov.direction === 'up';})[0];
-    movementUp.trigger = ()=>{return scene.cursors.up.isDown;};
+    movementUp.trigger = this.controls["up"];
     movementUp.action  = ()=>{
       movementUp.defaultAction();
       this.phaserCharacter.anims.play(this.name + '_move', true);
@@ -643,7 +655,7 @@ class Pacman extends Character{
 
     /* trigger */
     var movementDown = this.movements.filter(mov => {return mov.direction === 'down';})[0];
-    movementDown.trigger = ()=>{return scene.cursors.down.isDown;};
+    movementDown.trigger = this.controls["down"];
     movementDown.action  = ()=>{
       movementDown.defaultAction();
       this.phaserCharacter.anims.play(this.name + '_move', true);
@@ -655,7 +667,7 @@ class Pacman extends Character{
 
     /* trigger */
     var movementRight = this.movements.filter(mov => {return mov.direction === 'right';})[0];
-    movementRight.trigger = ()=>{return scene.cursors.right.isDown;};
+    movementRight.trigger = this.controls["right"];
     movementRight.action  = ()=>{
       movementRight.defaultAction();
       this.phaserCharacter.anims.play(this.name + '_move', true);
@@ -667,7 +679,7 @@ class Pacman extends Character{
 
     /* trigger */
     var movementLeft = this.movements.filter(mov => {return mov.direction === 'left';})[0];
-    movementLeft.trigger = ()=>{return scene.cursors.left.isDown;};
+    movementLeft.trigger = this.controls["left"];
     movementLeft.action  = ()=>{
       movementLeft.defaultAction();
       this.phaserCharacter.anims.play(this.name + '_move', true);
@@ -1065,6 +1077,7 @@ class Dot extends Character{
 
     if(this.typeDot === "super"){
       this.phaserCharacter.setScale(2.25);
+      this.setColor(0xE0CE00);
     }
 
   }
@@ -1107,18 +1120,3 @@ class Movement{
 function inArray(e, arr){
    return arr.indexOf(e) > -1
 }
-
-
-/**
-
-TODO NEXT STEPS :
-
-
-
- - Display Score
- - Game Over when Ghost eats pacman
- - Super Dot
- - Adapt Ghost animation
- - CSS
-
- */
