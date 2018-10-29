@@ -25,7 +25,6 @@ $(document).ready(()=>{
   phaserConfig['scene'] = pacManScene;
   var game = new Phaser.Game(phaserConfig);
 
-
   // replay button
   $("#btn-replay").on('click', ()=>{
     console.log("ok");

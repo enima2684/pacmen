@@ -17,9 +17,9 @@ class PacManScene extends Phaser.Scene{
 
 
       /****** Internal Objects ********/
-      this.pacman;
       this.ghosts  = [];
       this.dots  = [];
+      this.players = []
       this.cursors;
       this.score;
       this.startingTime;
@@ -50,7 +50,7 @@ class PacManScene extends Phaser.Scene{
     this.endingTime = this.startingTime + this.gameDuration * 60000;
 
     // Create a cursor to take control of the character
-    this.cursors = this.input.keyboard.createCursorKeys();
+    this.createUserInputs();
 
     this.createMap();
 
@@ -65,17 +65,37 @@ class PacManScene extends Phaser.Scene{
   }
 
   /**
+   * Method to create all user inputs
+   */
+  createUserInputs(){
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+
+    // add keys for second player
+
+    this.cursors["z"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+    this.cursors["q"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    this.cursors["s"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    this.cursors["d"] = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+  }
+
+  /**
    * Update the game objects
    */
   update(){
 
     // update pacman
-    this.pacman.update();
+    this.players.forEach(pacman=>{
+      pacman.update();
+    });
 
     // update ghosts
+    // TODO: review priorities
     this.ghosts.forEach(
       ghost=>{
-        ghost.update(this.pacman.getPosition());
+        this.players.forEach(pacman=>{
+          ghost.update(pacman.getPosition());
+        });
       }
     );
 
@@ -115,6 +135,7 @@ class PacManScene extends Phaser.Scene{
     this.ghosts = [];
 
     this.create();
+    this.physics.play();
 
 
   }
@@ -174,12 +195,18 @@ class PacManScene extends Phaser.Scene{
 
     // PACMAN - GHOST
     this.ghosts.forEach(
-      ghost => this.addPhysicsOverLap(ghost, this.pacman, this.ghostEatPacman)
+      ghost => {
+        this.players.forEach(pacman => {
+          this.addPhysicsOverLap(ghost, pacman, this.ghostEatPacman)
+        });
+      }
     );
 
     // PACMAN - DOTS
     this.dots.forEach(dot=>{
-      this.addPhysicsOverLap(this.pacman, dot, this.pacmanEatDot);
+      this.players.forEach(pacman => {
+        this.addPhysicsOverLap(pacman, dot, this.pacmanEatDot);
+      });
     });
 
 
@@ -234,14 +261,30 @@ class PacManScene extends Phaser.Scene{
    */
   createPacMan(){
 
-    // * create the character
-    var controls = {
-      right: ()=>{return this.cursors.right.isDown},
-      left : ()=>{return this.cursors.left.isDown},
-      up   : ()=>{return this.cursors.up.isDown},
-      down : ()=>{return this.cursors.down.isDown}
-    };
-    this.pacman = new Pacman(this, "me", [14, 17], controls);
+
+    // ---------------------------------------------------------------------
+    // create player 1
+    var player1Controls = {
+        right: ()=>{return this.cursors.right.isDown},
+        left : ()=>{return this.cursors.left.isDown},
+        up   : ()=>{return this.cursors.up.isDown},
+        down : ()=>{return this.cursors.down.isDown}
+      };
+    var player1Color = 0xFFFF00;
+    var player1 = new Pacman(this, "player1", [15, 17], player1Controls, player1Color);
+    this.players.push(player1);
+
+    // ---------------------------------------------------------------------
+    // create player 2
+    var player2Controls = {
+        right: ()=>{return this.cursors["d"].isDown},
+        left : ()=>{return this.cursors["q"].isDown},
+        up   : ()=>{return this.cursors["z"].isDown},
+        down : ()=>{return this.cursors["s"].isDown}
+      };
+    var player2Color = 0x00FFF4;
+    var player2 = new Pacman(this, "player1", [13, 17], player2Controls, player2Color);
+    this.players.push(player2);
 
   }
 
@@ -417,7 +460,7 @@ class Character{
    * Clears any given color and resets to the origin color
    */
   resetColor(){
-    this.phaserCharacter.clearTint();
+    this.setColor(this.color);
   }
 
   // moves the character to the desired position
@@ -614,11 +657,13 @@ class Pacman extends Character{
    * @param initialPosition
    * @param controls : obj that specifies what controls are used to trigger every control - it is an obj {right: trigger, left: trigger, ...}
    */
-  constructor(scene, name, initialPosition, controls){
+  constructor(scene, name, initialPosition, controls, color){
     super(scene, "pacman", name, initialPosition);
     this.controls = controls;
     this.timeout; // timeout triggered when eating a super dot
+    this.color = color;
 
+    this.setColor(color);
     this.createAnimations();
     this.setMovements();
 
