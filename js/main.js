@@ -27,7 +27,6 @@ $(document).ready(()=>{
 
   // replay button
   $("#btn-replay").on('click', ()=>{
-    console.log("ok");
     pacManScene.replay();
   });
 

@@ -1,5 +1,4 @@
 
-
 class PacManScene extends Phaser.Scene{
 
   /**
@@ -23,6 +22,7 @@ class PacManScene extends Phaser.Scene{
       this.startingTime;
       this.endingTime;
       this.gameDuration = gameDuration;
+      this.socket;
 
   }
 
@@ -45,6 +45,7 @@ class PacManScene extends Phaser.Scene{
     // init scores
     this.startingTime = new Date().getTime();
     this.endingTime = this.startingTime + this.gameDuration * 60000;
+    this.socket = io();
 
     // Create a cursor to take control of the character
     this.createUserInputs();
@@ -57,7 +58,9 @@ class PacManScene extends Phaser.Scene{
 
     this.createGhosts();
 
-    this.setUpInterractionsBetweenCharacters()
+    this.setUpInterractionsBetweenCharacters();
+
+
 
   }
 
@@ -304,17 +307,17 @@ class PacManScene extends Phaser.Scene{
     var player1 = new Pacman(this, "player1", [15, 17], player1Controls, player1Color);
     this.players.push(player1);
 
-    // ---------------------------------------------------------------------
-    // create player 2
-    var player2Controls = {
-        right: ()=>{return this.cursors["d"].isDown},
-        left : ()=>{return this.cursors["q"].isDown},
-        up   : ()=>{return this.cursors["z"].isDown},
-        down : ()=>{return this.cursors["s"].isDown}
-      };
-    var player2Color = 0x00FFF4;
-    var player2 = new Pacman(this, "player2", [13, 17], player2Controls, player2Color);
-    this.players.push(player2);
+    // // ---------------------------------------------------------------------
+    // // create player 2
+    // var player2Controls = {
+    //     right: ()=>{return this.cursors["d"].isDown},
+    //     left : ()=>{return this.cursors["q"].isDown},
+    //     up   : ()=>{return this.cursors["z"].isDown},
+    //     down : ()=>{return this.cursors["s"].isDown}
+    //   };
+    // var player2Color = 0x00FFF4;
+    // var player2 = new Pacman(this, "player2", [13, 17], player2Controls, player2Color);
+    // this.players.push(player2);
 
   }
 
@@ -681,13 +684,14 @@ class Character{
 
 
   update() {
+    // update movement
     this.movements.forEach(
       movement => {
         if (movement.trigger()) {
           movement.action(this.phaserCharacter);
         }
       }
-    )
+    );
   }
 
 }
@@ -710,6 +714,7 @@ class Pacman extends Character{
     this.color = color;
     this.score = 0;
     this.state = "normal";
+    this.socketId = guid();
 
     this.setColor(color);
     this.createAnimations();
@@ -717,7 +722,6 @@ class Pacman extends Character{
 
     this.phaserCharacter.setScale(0.9);
   }
-
 
   /**
    * place to set specific movement of Pacman
@@ -845,6 +849,20 @@ class Pacman extends Character{
       this.state = "normal";
 
       },5000);
+  }
+
+
+  update(){
+    super.update();
+
+    // broadcast movement
+    this.scene.socket.emit('movementUpdate',{
+      id: this.socketId,
+      position: this.getPosition(),
+      velocity: this.getVelocity(),
+      state: this.state
+    });
+
   }
 
 }
@@ -1215,6 +1233,16 @@ class Movement{
 }
 
 
+// Helpers
 function inArray(e, arr){
    return arr.indexOf(e) > -1
+}
+
+function guid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
 }

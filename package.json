@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "description": "Online multiplayer version of Pacman",
   "dependencies": {
-    "express": "^4.16.4"
+    "express": "^4.16.4",
+    "socket.io": "^2.1.1"
   }
 }
