@@ -5,14 +5,16 @@ class PacManScene extends Phaser.Scene{
    *
    * @param speed of the characters on the map
    * @param safetiles : indexes of the safe tiles ie not walls
-   * #param gameDuration: in minutes
+   * @param gameDuration: in minutes
+   * @param owner: player name of the owner of the scene
    */
-  constructor(speed, safetiles, gameDuration){
+  constructor(speed, safetiles, gameDuration, owner){
       super();
 
       /******** PARAMS *******************/
       this.speed = speed;
       this.safetiles = safetiles;
+      this.owner = owner;
 
       /****** Internal Objects ********/
       this.ghosts  = [];
@@ -54,13 +56,63 @@ class PacManScene extends Phaser.Scene{
 
     this.createDots();
 
-    this.createPacMan();
+    this.createPacMan("ping");
 
     this.createGhosts();
 
     this.setUpInterractionsBetweenCharacters();
 
+    this.addSocketEvents();
 
+  }
+
+
+  /**
+   * Adds a pacman to the game
+   * @param name
+   */
+  addPacman(name){
+
+    var pacman = this.createPacMan(name);
+    this.setUpInterractionsBetweenCharacters();
+
+  }
+
+  addSocketEvents(){
+
+    // Add a pacman
+    this.socket.on('createPacman', pacman=>{
+      if(this.socket.id !== pacman.sender){
+        // do not add a pacman to my self again
+        this.addPacman(pacman.name);
+      }
+    });
+
+    this.socket.on('test', msg=>{
+      console.log("I am " + this.socket.id + " and I received message " + msg);
+      this.socket.emit('forall', "Hi all!");
+    });
+
+    this.socket.on('forall', msg=>{
+      console.log("I received message for all !");
+    });
+
+    // // answer to requestGameState
+    // this.socket.on('requestGameState', msg =>{
+    //   console.log("Game state requested ..");
+    //   console.log("Preparing the data ...")
+    //   // 1. prepare info to send,
+    //   var state = {
+    //     ghosts:["g"],
+    //     pacmans:["p"],
+    //     dots:["d"]
+    //   };
+    //
+    //   // 2. send it back
+    //   // this.socket.emit('answerGameState', state);
+    //
+    //
+    // });
 
   }
 
@@ -99,6 +151,7 @@ class PacManScene extends Phaser.Scene{
     // update timer
     this.updateTimer();
 
+
     // is the game over ?
     if (this.isGameOver())
     {
@@ -128,14 +181,6 @@ class PacManScene extends Phaser.Scene{
    */
   doWhenGameIsOver(){
     this.physics.pause();
-    this.pacman.phaserCharacter.setTint(0xff0000);// Pac man animation
-
-    // Pac man animation
-    var angle = 0;
-    setInterval(()=>{
-      angle += 90;
-      this.pacman.setAngle(angle);
-    }, 100)
   }
 
   replay(){
@@ -292,33 +337,21 @@ class PacManScene extends Phaser.Scene{
   /**
    * Create PacMan
    */
-  createPacMan(){
-
+  createPacMan(name){
 
     // ---------------------------------------------------------------------
     // create player 1
-    var player1Controls = {
+    var playerControls = {
         right: ()=>{return this.cursors.right.isDown},
         left : ()=>{return this.cursors.left.isDown},
         up   : ()=>{return this.cursors.up.isDown},
         down : ()=>{return this.cursors.down.isDown}
       };
-    var player1Color = 0xFFFF00;
-    var player1 = new Pacman(this, "player1", [15, 17], player1Controls, player1Color);
-    this.players.push(player1);
+    var playerColor = 0xFFFF00;
+    var player = new Pacman(this, name, [15, 17], playerControls, playerColor);
+    this.players.push(player);
 
-    // // ---------------------------------------------------------------------
-    // // create player 2
-    // var player2Controls = {
-    //     right: ()=>{return this.cursors["d"].isDown},
-    //     left : ()=>{return this.cursors["q"].isDown},
-    //     up   : ()=>{return this.cursors["z"].isDown},
-    //     down : ()=>{return this.cursors["s"].isDown}
-    //   };
-    // var player2Color = 0x00FFF4;
-    // var player2 = new Pacman(this, "player2", [13, 17], player2Controls, player2Color);
-    // this.players.push(player2);
-
+    return player
   }
 
 
@@ -714,7 +747,6 @@ class Pacman extends Character{
     this.color = color;
     this.score = 0;
     this.state = "normal";
-    this.socketId = guid();
 
     this.setColor(color);
     this.createAnimations();
@@ -857,7 +889,7 @@ class Pacman extends Character{
 
     // broadcast movement
     this.scene.socket.emit('movementUpdate',{
-      id: this.socketId,
+      id: this.scene.socket.id,
       position: this.getPosition(),
       velocity: this.getVelocity(),
       state: this.state

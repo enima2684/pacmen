@@ -20,6 +20,7 @@ if (!String.prototype.format) {
   };
 }
 
+
 /*** ROUTES ******/
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
@@ -29,22 +30,44 @@ app.get('/', function(req, res){
 
 var players = [];
 
-
 io.on('connection', client => {
+  console.log('User {0} is connected !'.format(client.id));
 
-  var address = client.handshake.address;
-  console.log("User {0} is connected from {1}".format(client.id, address));
+  if(players.length > 0){
+    // join an existing game
 
-  // update list of players
-  
+    // 1. create the pacman in others
+    io.emit('createPacman', {
+      name: "pong",
+      sender: client.id
+    });
+
+    io.to(players[0]).emit('test', "trigger transmission to all");
+
+  }
+
+  players.push(client.id);
+  console.log(client.id + " player added !");
 
   /** Disconnect Event **/
   client.on('disconnect', () =>{
     console.log('User {0} is now disconnected !'.format(client.id));
   });
 
+
+  client.on('answerGameState', state=>{
+    console.log("state updated!");
+    console.log(state);
+  });
+
+
   client.on('movementUpdate', msg =>{
-    console.log(msg);
+    // console.log(msg);
+  });
+
+  client.on('forall', msg=>{
+    console.log("I am the one who received the message for all !");
+    io.emit('forall', "hello");
   });
 
 
