@@ -26,6 +26,93 @@ app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
+
+
+/**** GAME STATE OBJECT *****/
+
+
+class CharacterState{
+
+  constructor(id, type, position, velocity, state){
+
+    this.id = id;
+    this.type = type; // pacman , ghost, dot
+    this.position = position;
+    this.velocity = velocity;
+    this.state = state;
+
+    // run some sanity checks
+    this.testObject()
+
+  }
+
+  /**
+   * Run tests to check the the object contains wh  t we expect from him
+   */
+  testObject(){
+
+    // test the types
+    if( ["pacman", "dot", "ghost"].indexOf(this.type) < 0){
+      throw new Error("type in CharacterState should be pacman dot or ghost")
+    }
+
+  }
+
+
+}
+
+
+class GameState{
+
+  constructor(){
+    this.startingTime;
+    this.endingTime;
+    this.characters = []; // array of CharacterState objects
+
+  }
+
+
+  onReceiveMovUpdate(data){
+
+    // 1. update the data
+
+    var character = this.characters.filter(c=>{return c === data["characterId"];});
+    if(character.length !== 0){
+      character = character[0];
+      character.position = data["position"];
+      character.velocity = data["velocity"];
+      character.state    = data["state"];
+    }
+    else{
+      // create the new character
+      character = new CharacterState(
+        data["characterId"],
+        data["characterType"],
+        data["position"],
+        data["velocity"],
+        data["state"]
+      );
+      this.characters.push(character);
+
+    }
+
+
+    // 2. broadcast to everyone the new state
+    this.broadcastMe()
+
+  }
+
+
+  /**
+   * Broadcasts the current state
+   */
+  broadcastMe(){
+    io.emit('updatedState', this);
+  }
+
+
+}
+
 /** SOCKET EVENTS **/
 
 var players = [];
