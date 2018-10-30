@@ -1,0 +1,8 @@
+{
+  "name": "Pacmen",
+  "version": "3.0.0",
+  "description": "Online multiplayer version of Pacman",
+  "dependencies": {
+    "express": "^4.16.4"
+  }
+}
