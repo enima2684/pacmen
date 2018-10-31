@@ -33,13 +33,16 @@ app.get('/', function(req, res){
 
 class CharacterState{
 
-  constructor(id, type, position, velocity, state){
+  constructor(id, name, type, position, velocity, state, score=0, kwargs={}){
 
     this.id = id;
+    this.name = name;
     this.type = type; // pacman , ghost, dot
     this.position = position;
     this.velocity = velocity;
     this.state = state;
+    this.score = score;
+    this.kwargs = kwargs;
 
     // run some sanity checks
     this.testObject()
@@ -55,9 +58,7 @@ class CharacterState{
     if( ["pacman", "dot", "ghost"].indexOf(this.type) < 0){
       throw new Error("type in CharacterState should be pacman dot or ghost")
     }
-
   }
-
 
 }
 
@@ -65,98 +66,137 @@ class CharacterState{
 class GameState{
 
   constructor(){
-    this.startingTime;
-    this.endingTime;
+    this.startingTime = undefined;
+    this.endingTime = undefined;
     this.characters = []; // array of CharacterState objects
-
-  }
-
-
-  onReceiveMovUpdate(data){
-
-    // 1. update the data
-
-    var character = this.characters.filter(c=>{return c === data["characterId"];});
-    if(character.length !== 0){
-      character = character[0];
-      character.position = data["position"];
-      character.velocity = data["velocity"];
-      character.state    = data["state"];
-    }
-    else{
-      // create the new character
-      character = new CharacterState(
-        data["characterId"],
-        data["characterType"],
-        data["position"],
-        data["velocity"],
-        data["state"]
-      );
-      this.characters.push(character);
-
-    }
-
-
-    // 2. broadcast to everyone the new state
-    this.broadcastMe()
+    this.socketIds = [];
 
   }
 
 
   /**
-   * Broadcasts the current state
+   * Updates all characters received on a mov data
+   * @param data
    */
-  broadcastMe(){
-    io.emit('updatedState', this);
+  onUpdataMovData(data){
+
+    // 1. update the data
+    try {
+      data.forEach(d => this.updateOneCharacterMovData(d));
+    }
+    catch (e) {
+      console.log(e);
+    }
+
+
   }
 
+  /**
+   * Updates a single character
+   * @param d
+   */
+  updateOneCharacterMovData(d){
 
+    var character = this.characters.filter(c=>{return c.id === d["characterId"];});
+    if(character.length !== 0){
+      character = character[0];
+      character.position = d["position"];
+      character.velocity = d["velocity"];
+      character.state    = d["state"];
+      character.score    = d["score"];
+    }
+    else{
+      // create the new character
+      character = new CharacterState(
+        d["characterId"],
+        d["characterName"],
+        d["characterType"],
+        d["position"],
+        d["velocity"],
+        d["state"],
+        d["kwargs"],
+        0
+      );
+      this.characters.push(character);
+    }
+  }
+
+  /**
+   * Overwirtes the game state given what has been received from the client
+   * @param gsClient
+   */
+  overwriteState(gsClient){
+    this.startingTime = undefined;
+    this.endingTime = undefined;
+    this.characters = []; // array of CharacterState objects
+    this.onUpdataMovData(gsClient);
+  }
 }
 
-/** SOCKET EVENTS **/
+var gameState = new GameState();
 
-var players = [];
+/** SOCKET EVENTS **/
 
 io.on('connection', client => {
   console.log('User {0} is connected !'.format(client.id));
 
-  if(players.length > 0){
-    // join an existing game
+  if( gameState.socketIds.length === 0 ){
+    // Creation of a new game
+    console.log("NEW GAME !");
 
-    // 1. create the pacman in others
-    io.emit('createPacman', {
-      name: "pong",
-      sender: client.id
-    });
-
-    io.to(players[0]).emit('test', "trigger transmission to all");
+    // gather ids for all objects
+    io.to(client.id).emit('serverRequestStateFromClient', '')
 
   }
+  else{
 
-  players.push(client.id);
-  console.log(client.id + " player added !");
+    if( gameState.socketIds.indexOf(client.id) < 0 ){
+
+
+      // Joining an existing game
+      console.log("Joining an existing game !")
+
+      // 1. get the game state and send it to the client
+      // -- expect the client to update his internal state
+      io.to(client.id).emit('initialGameState', gameState);
+
+    }
+  }
+  gameState.socketIds.push(client.id);
+
+  /** serverRequestStateFromClientAnswer **/
+  client.on('serverRequestStateFromClientAnswer', gsClient => {
+    // overwrite the internal state with the data received
+    console.log("setting initial state");
+    gameState.overwriteState(gsClient);
+  });
+
+  /** Reception of update Mov **/
+  client.on('updateMov', data =>{
+
+    // update the game state
+    if(data !== null){
+      gameState.onUpdataMovData(data);
+
+      // broadcast the new state to everyone
+      client.broadcast.emit('updateStateToClient', gameState);
+    }
+
+
+  });
+
+
+  client.on('reset', msg=>{
+    gameState = new GameState();
+    client.broadcast.emit('updateStateToClient', gameState);
+    // gather ids for all objects
+    io.to(client.id).emit('serverRequestStateFromClient', '')
+  });
 
   /** Disconnect Event **/
   client.on('disconnect', () =>{
     console.log('User {0} is now disconnected !'.format(client.id));
   });
-
-
-  client.on('answerGameState', state=>{
-    console.log("state updated!");
-    console.log(state);
-  });
-
-
-  client.on('movementUpdate', msg =>{
-    // console.log(msg);
-  });
-
-  client.on('forall', msg=>{
-    console.log("I am the one who received the message for all !");
-    io.emit('forall', "hello");
-  });
-
 
 });
 

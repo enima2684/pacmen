@@ -25,7 +25,7 @@ class PacManScene extends Phaser.Scene{
       this.endingTime;
       this.gameDuration = gameDuration;
       this.socket;
-
+      this.isActive = false;
   }
 
   /**
@@ -56,7 +56,7 @@ class PacManScene extends Phaser.Scene{
 
     this.createDots();
 
-    this.createPacMan("ping");
+    this.createPacMan("first");
 
     this.createGhosts();
 
@@ -67,52 +67,209 @@ class PacManScene extends Phaser.Scene{
   }
 
 
-  /**
-   * Adds a pacman to the game
-   * @param name
-   */
-  addPacman(name){
+  addSocketEvents(){
 
-    var pacman = this.createPacMan(name);
+    // // Add a pacman
+    // this.socket.on('createPacman', pacman=>{
+    //   if(this.socket.id !== pacman.sender){
+    //     // do not add a pacman to my self again
+    //     this.addPacman(pacman.name);
+    //   }
+    // });
+
+
+    this.socket.on('updateStateToClient', gameState => {
+
+      // update internal states
+      if (this.isActive){
+        this.updateInternalState(gameState);
+      }
+
+
+    });
+
+
+    this.socket.on('serverRequestStateFromClient', msg=>{
+
+      console.log("sending to the server the reqested state of the game ..")
+      // 1. get the stateObject to send to the server
+      var gameState = this.getInternalState();
+
+      // 2. send it to the server
+      this.socket.emit('serverRequestStateFromClientAnswer', gameState);
+
+      this.isActive = true;
+
+    });
+
+    this.socket.on('initialGameState', gameState => {
+      // join an existing game
+      this.joinGame(gameState);
+      this.isActive = true;
+    })
+
+  }
+
+  /**
+   * Joins an existing game described by the gameState
+   * @param gameState
+   */
+  joinGame(gameState){
+
+    console.log("Joining an existing game");
+
+    // reset all characters
+    this.players.forEach( c => {c.disable()});
+    this.dots.forEach( c => {c.disable()});
+    this.ghosts.forEach( c => {c.disable()});
+
+    this.players = [];
+    this.dots = [];
+    this.ghosts = [];
+
+    // read the game state and create the characters
+    this.startingTime = gameState.startingTime;
+    this.endingTime   = gameState.endingTime;
+
+    // pacmans
+    gameState
+      .characters.filter( c => {return c.type === "pacman";})
+      .forEach(character => {
+        this.createPacMan(character.name, character.id, character.position); // create pacman
+      });
+
+    // ghosts
+    gameState
+      .characters.filter( c => {return c.type === "ghost";})
+      .forEach(character => {
+        var ghost = this.createGhost(character.name, character.id, character.position); // create ghost
+        ghost.targetPacman = this.players.filter(pacman => {return pacman.characterId === character.id})[0];
+      });
+
+    // dots
+    gameState
+      .characters.filter( c => {return c.type === "dot";})
+      .forEach(character => {
+        this.createDot("normal", character.position); // create dot
+      });
+
+    // setup all interractions
     this.setUpInterractionsBetweenCharacters();
 
   }
 
-  addSocketEvents(){
+  getInternalState(){
+    // gets the internal state of the game
 
-    // Add a pacman
-    this.socket.on('createPacman', pacman=>{
-      if(this.socket.id !== pacman.sender){
-        // do not add a pacman to my self again
-        this.addPacman(pacman.name);
+
+    var gameState = {};
+
+    gameState.startingTime = this.startingTime;
+    gameState.endingTime   = this.endingTime;
+    gameState.characters   = [];
+
+    // pacman state
+    this.players.forEach(
+      pacman => {
+        gameState.characters.push(pacman.getInternalState());
+      }
+    );
+
+    // ghost state
+    this.ghosts.forEach(
+      ghost => {
+        gameState.characters.push(ghost.getInternalState());
+      }
+    );
+
+    // dots state
+    this.dots.forEach(
+      dot => {
+        gameState.characters.push(dot.getInternalState());
+      }
+    );
+
+  }
+
+  /**
+   * Updates the internal state of the objects given the gameState received from the server
+   * @param gameState
+   */
+  updateInternalState(gameState){
+
+    // pacmans
+    gameState.characters
+      .filter(gs => {return gs.type === "pacman"})
+      .forEach(gs => {
+        var pacman = this.players.filter( p => {return p.characterId === gs.id});
+        if(pacman.length === 0){
+          this.createPacMan(gs.name, gs.id, gs.position);
+        }
+        else{
+          pacman = pacman[0];
+          pacman.updateInternalState(gs);
+        }
+      });
+
+    // remove non necessary pacmans
+    this.players.forEach((character, index, arr) => {
+      if( gameState.characters.filter( p => {return p.characterId === character.id;}).length  === 0){
+        character.disable();
+        arr.splice(index, 1);
       }
     });
 
-    this.socket.on('test', msg=>{
-      console.log("I am " + this.socket.id + " and I received message " + msg);
-      this.socket.emit('forall', "Hi all!");
+    // ghosts
+    gameState.characters
+      .filter(gs => {return gs.type === "ghost"})
+      .forEach(gs => {
+        var ghost = this.ghosts.filter( p => {return p.characterId === gs.id});
+        if(ghost.length === 0){
+
+          // console.log("creating ghost " + gs.name + " - " + gs.id);
+          ghost = this.createGhost(gs.name, gs.id, gs.position);
+        }
+        else{
+          ghost = ghost[0];
+        }
+        ghost.updateInternalState(gs);
+      });
+
+
+
+    // remove non necessary pacmans
+    this.ghosts.forEach((character, index, arr) => {
+      if( gameState.characters.filter( p => {return p.characterId === character.id;}).length  === 0){
+        console.log("removing one ghost !");
+        character.disable();
+        arr.splice(index, 1);
+      }
     });
 
-    this.socket.on('forall', msg=>{
-      console.log("I received message for all !");
+
+
+    // dots
+    // gameState.characters
+    //   .filter(gs => {return gs.type === "dot"})
+    //   .forEach(gs => {
+    //     var dot = this.players.filter( p => {return p.characterId === gs.id});
+    //     if(dot.length === 0){
+    //       console.log('dot id '+ gs.id +' not found. -- Add new character ?');
+    //     }
+    //     else{
+    //       dot = dot[0];
+    //       dot.updateInternalState(gs);
+    //     }
+    //   });
+
+    // remove non necessary dots
+    this.dots.forEach((character, index, arr) => {
+      if( gameState.characters.filter( p => {return p.characterId === character.id;}).length  === 0){
+        character.disable();
+        arr.splice(index, 1);
+      }
     });
 
-    // // answer to requestGameState
-    // this.socket.on('requestGameState', msg =>{
-    //   console.log("Game state requested ..");
-    //   console.log("Preparing the data ...")
-    //   // 1. prepare info to send,
-    //   var state = {
-    //     ghosts:["g"],
-    //     pacmans:["p"],
-    //     dots:["d"]
-    //   };
-    //
-    //   // 2. send it back
-    //   // this.socket.emit('answerGameState', state);
-    //
-    //
-    // });
 
   }
 
@@ -135,29 +292,46 @@ class PacManScene extends Phaser.Scene{
    */
   update(){
 
-    // update pacman
-    this.players.forEach(pacman=>{
-      pacman.update();
-    });
+    if(this.isActive){
 
-    // update ghosts
-    this.ghosts.forEach(
-      ghost=>{ghost.update(ghost.targetPacman.getPosition());}
-    );
+      var toBroadcast = [];
 
-    // update score
-    this.updateScoreInDom();
+      // update pacman
+      this.players.forEach(pacman=>{
+        pacman.update();
+        toBroadcast.push(pacman.getCharacterState());
+      });
 
-    // update timer
-    this.updateTimer();
+      // update ghosts
+      this.ghosts.forEach(
+        ghost=>{
+          // ghost.update(ghost.targetPacman.getPosition());
+          ghost.update([16*16, 16*16]);
+          toBroadcast.push(ghost.getCharacterState());
+        }
+      );
 
+      // update dots
+      this.dots.forEach(
+        dot=>{
+          toBroadcast.push(dot.getCharacterState());
+        }
+      );
 
-    // is the game over ?
-    if (this.isGameOver())
-    {
-      this.doWhenGameIsOver();
+      // update score
+      this.updateScoreInDom();
+
+      // update timer
+      this.updateTimer();
+
+      // is the game over ?
+      if (this.isGameOver()){
+        this.doWhenGameIsOver();
+      }
+
+      this.socket.emit('updateMov', toBroadcast);
+
     }
-
   }
 
   /**
@@ -189,8 +363,9 @@ class PacManScene extends Phaser.Scene{
     this.dots = [];
     this.ghosts = [];
 
+    this.socket.emit('reset', "");
+
     this.create();
-    this.physics.play();
     $("#scores").empty();
 
   }
@@ -313,13 +488,16 @@ class PacManScene extends Phaser.Scene{
     // Create the dots
     // 3% of the dots created are super dots
     dotPositions.forEach( dotPosition => {
-      initialPosition = [dotPosition["colIx"], dotPosition["rowIx"]];
-      this.dots.push(
-        new Dot(this, "dot", initialPosition, Math.random() < 0.02 ? "super" : "normal")
-      );
+      initialPosition = [dotPosition["colIx"] * 16 + 8, dotPosition["rowIx"] * 16 + 8];
+      var type =  Math.random() < 0.02 ? "super" : "normal";
+      this.createDot(type, initialPosition);
     });
 
 
+  }
+
+  createDot(type, initialPosition, id=guid()){
+    this.dots.push(new Dot(this, "dot", initialPosition, type, id))
   }
 
   /**
@@ -337,7 +515,7 @@ class PacManScene extends Phaser.Scene{
   /**
    * Create PacMan
    */
-  createPacMan(name){
+  createPacMan(name, id=guid(), initialPosition=undefined){
 
     // ---------------------------------------------------------------------
     // create player 1
@@ -348,7 +526,14 @@ class PacManScene extends Phaser.Scene{
         down : ()=>{return this.cursors.down.isDown}
       };
     var playerColor = 0xFFFF00;
-    var player = new Pacman(this, name, [15, 17], playerControls, playerColor);
+
+    var initialPositionToUse = [15 * 16 + 8, 17 * 16 +8];
+    if(initialPosition !== undefined){
+      initialPositionToUse = initialPosition;
+    }
+
+
+    var player = new Pacman(this, name, initialPositionToUse, playerControls, playerColor, id);
     this.players.push(player);
 
     return player
@@ -357,34 +542,61 @@ class PacManScene extends Phaser.Scene{
 
   createGhosts(){
 
-    // Add ghosts here
     var ghostsToCreate = [
-      {
-        name: "blinky",
-        initialPosition: [18, 8]
-      },
-      {
-        name: "pinky",
-        initialPosition: [10, 8]
-      },
-      {
-        name: "inky",
-        initialPosition: [18, 22]
-      },
-      {
-        name: "clyde",
-        initialPosition: [10, 22]
-      },
-
+      "blinky",
+      "pinky",
+      "inky",
+      "clyde"
     ];
 
     // create and populate the list of ghosts
-    ghostsToCreate.forEach(ghost => {
-      this.ghosts.push(
-        new Ghost(this, ghost.name, ghost.initialPosition)
-      )
+    ghostsToCreate.forEach(ghostName => {
+      this.createGhost(ghostName)
     });
 
+  }
+
+
+  /**
+   * Creates one ghost
+   * @param name
+   * @param id
+   */
+  createGhost(name, id=guid(), initialPosition=undefined){
+
+
+    // ghosts properties
+    var ghostProperties = {
+
+      blinky: {
+        initialPosition : [18 * 16 + 8, 8 * 16 + 8]
+      },
+
+      pinky: {
+        initialPosition : [10 * 16 + 8, 8 * 16 + 8]
+      },
+
+      inky: {
+        initialPosition : [18 * 16 + 8, 22 * 16 + 8]
+      },
+
+      clyde: {
+        initialPosition : [10 * 16 + 8, 22 * 16 + 8]
+      },
+
+    };
+
+
+     var initialPositionToUse = ghostProperties[name].initialPosition;
+
+    if(initialPosition !== undefined){
+      initialPositionToUse = initialPosition
+    }
+
+    var ghost = new Ghost(this, name, initialPositionToUse, id);
+    this.ghosts.push(ghost);
+
+    return ghost
   }
 
 
@@ -423,7 +635,7 @@ class PacManScene extends Phaser.Scene{
       // pacman eats ghost
       // only eats ghost if in super state
 
-      console.log("Pacman eats ghost");
+      // console.log("Pacman eats ghost");
 
       ghost.state = "dead";
       clearTimeout(ghost.deathTimeout);
@@ -443,7 +655,7 @@ class PacManScene extends Phaser.Scene{
   pacmanEatDot(pacman, dot, scene){
 
     dot.disable();
-    dot.isEaten = true;
+    dot.state = "eaten";
 
     pacman.score += 10;
 
@@ -478,7 +690,7 @@ class PacManScene extends Phaser.Scene{
 
 
     // if all dots are eaten, reborn all of them
-    var nbEatenDots = scene.dots.filter(dot => {return dot.isEaten;}).length;
+    var nbEatenDots = scene.dots.filter(dot => {return dot.state === "eaten";}).length;
     if(nbEatenDots === scene.dots.length){
       scene.dots =[];
       scene.createDots();
@@ -504,7 +716,7 @@ class Character{
    * @param characterType: string that specifies the character type : pacman or ghost
    * @param initialPosition : array og lenth 2 with the position of the charachter on the 31x28 grid
    */
-  constructor(scene, characterType, name, initialPosition){
+  constructor(scene, characterType, name, initialPosition, id=guid()){
 
     if (this.constructor === Character) {
         throw new TypeError('Abstract class "Character" cannot be instantiated directly.');
@@ -512,11 +724,16 @@ class Character{
 
     this.scene = scene;
     this.name = name;
-    this.phaserCharacter = scene.physics.add.sprite((initialPosition[0] * 16) + 8, (initialPosition[1] * 16) + 8, characterType);
+    this.characterType = characterType;
+    this.phaserCharacter = scene.physics.add.sprite(initialPosition[0], initialPosition[1], characterType);
     this.phaserCharacter.setCollideWorldBounds(true);
     this.step = 8;
     this.movements = [];
+    // this.initialPosition = [(initialPosition[0] * 16) + 8, (initialPosition[1] * 16) + 8];
     this.initialPosition = initialPosition;
+    this.characterId = id;
+    this.state = "normal";
+    this.score = 0;
 
     // keep inside the phaser object a reference of the character object
     this.phaserCharacter.character = this;
@@ -547,8 +764,8 @@ class Character{
 
   // moves the character to the desired position
   setPosition(position){
-    this.phaserCharacter.x = position[0] * 16 + 8;
-    this.phaserCharacter.y = position[1] * 16 + 6;
+    this.phaserCharacter.x = position[0];
+    this.phaserCharacter.y = position[1];
 
   }
 
@@ -715,6 +932,51 @@ class Character{
     );
   }
 
+  /**
+   * Gets the state objectg that will be broadcasted
+   */
+  getCharacterState() {
+    var out = {
+      socketId: this.scene.socket.id,
+      characterName: this.name,
+      characterId: this.characterId,
+      characterType: this.characterType,
+      position: this.getPosition(),
+      velocity: this.getVelocity(),
+      state: this.state,
+      score: this.score
+    };
+    return out
+  }
+
+  /**
+   * Updates internal state from data received from server
+   * @param gs
+   */
+  updateInternalState(gs){
+    this.characterId = gs.id;
+    this.state = gs.state;
+    this.score = gs.score;
+    this.setVelocity(gs.velocity);
+    this.setPosition(gs.position);
+  }
+
+
+  /**
+   * Gets internal state to send to the server
+   */
+  getInternalState(){
+
+    var out = {};
+    out.id = this.characterId;
+    out.type = this.characterType;
+    out.position = this.getPosition();
+    out.velocity = this.getVelocity();
+    out.state = this.state;
+    out.score = this.score;
+    return out
+  }
+
 
   update() {
     // update movement
@@ -740,13 +1002,12 @@ class Pacman extends Character{
    * @param initialPosition
    * @param controls : obj that specifies what controls are used to trigger every control - it is an obj {right: trigger, left: trigger, ...}
    */
-  constructor(scene, name, initialPosition, controls, color){
-    super(scene, "pacman", name, initialPosition);
+  constructor(scene, name, initialPosition, controls, color, id=guid()){
+    super(scene, "pacman", name, initialPosition, id);
     this.controls = controls;
     this.timeout; // timeout triggered when eating a super dot
     this.color = color;
     this.score = 0;
-    this.state = "normal";
 
     this.setColor(color);
     this.createAnimations();
@@ -897,6 +1158,12 @@ class Pacman extends Character{
 
   }
 
+  getInternalState(){
+    var out = super.getInternalState();
+    out.kwargs = {};
+    return out
+  }
+
 }
 
 
@@ -905,8 +1172,8 @@ class Pacman extends Character{
  */
 class Ghost extends Character{
 
-  constructor(scene, name, initialPosition){
-    super(scene, "ghost", name, initialPosition);
+  constructor(scene, name, initialPosition, id=guid()){
+    super(scene, "ghost", name, initialPosition, id);
     this.createAnimations();
     this.setMovements();
     this.deathTimeout;  // timeout when death
@@ -918,7 +1185,7 @@ class Ghost extends Character{
     // state can be normal or afraid (when pacman eats a super dot)
     // when state is afraid - the ghost runs away from pacman and it has a different animation
     // when state is dead - the ghost takes some time to become as he was
-    this.state = "normal";
+
 
   }
 
@@ -1117,7 +1384,6 @@ class Ghost extends Character{
    * @param pacman
    */
   update(targetPosition){
-
     this.track(targetPosition);
     super.update();
   }
@@ -1141,7 +1407,7 @@ class Ghost extends Character{
       var distY = targetPosition[1] - this.getPosition()[1];
 
       // 2. choose the next direction to take -  random sometime
-      if(Math.random() < 0.8){
+      if(Math.random() < 0.1){
         directionToTake = this.getDirectionBasedOnDistance(distX, distY);
       }
       else{
@@ -1205,6 +1471,14 @@ class Ghost extends Character{
     this.movements.filter(mov=>{return mov.direction === direction;})[0].trigger = ()=>{return true;};
   }
 
+  getInternalState(){
+    var out = super.getInternalState();
+    out.kwargs = {};
+    out.kwargs.targetPacmanId = this.targetPacman.characterId;
+    return out
+  }
+
+
 }
 
 /**
@@ -1219,9 +1493,10 @@ class Dot extends Character{
    * @param initialPosition : array of length 2
    * @param type : "normal" or "super - super dots give super powers to pacman
    */
-  constructor(scene, name, initialPosition, type){
-    super(scene, "dot", name, initialPosition);
+  constructor(scene, name, initialPosition, type, id=guid()){
+    super(scene, "dot", name, initialPosition, id);
     this.typeDot = type;
+    this.state = "normal"; // state can be normal or eaten
     this.isEaten = false;
 
     if(this.typeDot === "super"){
