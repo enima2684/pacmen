@@ -111,3 +111,5 @@ fabric.properties
 # Python Virtual Environment
 
 venv/
+
+node_modules/
