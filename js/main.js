@@ -14,7 +14,7 @@ var phaserConfig = {
 var pacManScene = new PacManScene(
   speed     = 150,        // defines the speed of the characters
   safetiles = [7, 14],    // defines what a wall is
-  gameDuration = 2     // game duration in minutes
+  gameDuration = 1.5     // game duration in minutes
 );
 
 

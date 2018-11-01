@@ -23,8 +23,11 @@ class PacManScene extends Phaser.Scene{
       this.startingTime;
       this.endingTime;
       this.gameDuration = gameDuration;
+      this.sounds = {};
 
   }
+
+
 
   /**
    * Load the ressources
@@ -35,6 +38,14 @@ class PacManScene extends Phaser.Scene{
     this.load.tilemapTiledJSON('map', '../assets/pacman-map.json');
     this.load.image('tiles', '../assets/img/pacman-tiles.png');
     this.load.spritesheet('ghost', '../assets/img/pac_man_extended.png', {frameWidth:16, frameHeight: 16});
+
+    this.sounds["intro"]               = new Audio("../assets/sounds/pacman_beginning.wav");
+    this.sounds["pacman_death"]        = new Audio("../assets/sounds/pacman_death.wav");
+    this.sounds["pacman_eatghost"]     = new Audio("../assets/sounds/pacman_eatghost.wav");
+    this.sounds["pacman_intermission"] = new Audio("../assets/sounds/pacman_intermission.wav");
+    this.sounds["pacman_chomp"]        = new Audio("../assets/sounds/pacman_chomp.wav");
+    this.sounds["pacman_extrapac"]        = new Audio("../assets/sounds/pacman_extrapac.wav");
+
   }
 
   /**
@@ -57,7 +68,9 @@ class PacManScene extends Phaser.Scene{
 
     this.createGhosts();
 
-    this.setUpInterractionsBetweenCharacters()
+    this.setUpInterractionsBetweenCharacters();
+
+    this.sounds["intro"].play();
 
   }
 
@@ -125,25 +138,36 @@ class PacManScene extends Phaser.Scene{
    */
   doWhenGameIsOver(){
     this.physics.pause();
-    this.pacman.phaserCharacter.setTint(0xff0000);// Pac man animation
+    this.sounds["pacman_intermission"].play();
 
-    // Pac man animation
-    var angle = 0;
+    // Winner !
+    var winner = this.players.sort( (pacman1, pacman2) => {return pacman1.score - pacman2.score})[1].name;
+    $(".timer-zone").html("The winner is " + winner + "!!!");
+    var blinker = true;
     setInterval(()=>{
-      angle += 90;
-      this.pacman.setAngle(angle);
-    }, 100)
+      if(blinker){
+        $(".timer-zone").css({"color": "black"});
+      }
+      else{
+        $(".timer-zone").css({"color": "white"});
+      }
+      blinker = !blinker;
+
+      },500);
+
   }
 
   replay(){
 
-    this.players = [];
-    this.dots = [];
-    this.ghosts = [];
+    // this.players = [];
+    // this.dots = [];
+    // this.ghosts = [];
+    //
+    // this.create();
+    // this.physics.play();
+    // $("#scores").empty();
 
-    this.create();
-    this.physics.play();
-    $("#scores").empty();
+    location.reload();
 
   }
 
@@ -361,10 +385,12 @@ class PacManScene extends Phaser.Scene{
   pacmanEatPacman(pacman1, pacman2, scene){
 
     if(pacman1.state === "super" && pacman2.state === "normal"){
+      scene.sounds["pacman_death"].play();
       pacman1.score += 500;
       pacman2.resetWhenEaten();
     }
     else if (pacman2.state === "super" && pacman1.state === "normal"){
+      scene.sounds["pacman_death"].play();
       pacman2.score += 500;
       pacman1.resetWhenEaten();
     }
@@ -380,14 +406,16 @@ class PacManScene extends Phaser.Scene{
   ghostEatPacman(ghost, pacman, scene){
 
     if(ghost.state === "normal" && pacman.state === "normal"){
+      scene.sounds["pacman_death"].play();
       // ghost eat pacman
       pacman.resetWhenEaten();
+
     }
     else if (ghost.state === "afraid" && pacman.state === "super"){
       // pacman eats ghost
       // only eats ghost if in super state
 
-      console.log("Pacman eats ghost");
+      scene.sounds["pacman_eatghost"].play();
 
       ghost.state = "dead";
       clearTimeout(ghost.deathTimeout);
@@ -414,6 +442,8 @@ class PacManScene extends Phaser.Scene{
     // if super dot, give super power
     if(dot.typeDot === "super")
     {
+      scene.sounds["pacman_extrapac"].play();
+
       // super state
       pacman.setColor(0xfd6a02); // TODO: to implment inside pacman
       pacman.state = "super";
@@ -438,6 +468,9 @@ class PacManScene extends Phaser.Scene{
           .forEach(ghost=> {ghost.state = "normal";});
 
       }, 5000);
+    }
+    else{
+      scene.sounds["pacman_chomp"].play();
     }
 
 
