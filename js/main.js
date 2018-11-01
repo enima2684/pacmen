@@ -1,32 +1,6 @@
 var names = [
-  "Abi",
-  "Adele",
-  "Amine",
-  "Antoine",
-  "Cecile",
-  "Chloe",
-  "Corrado",
-  "Fareaha",
-  "Filippo",
-  "Geoffroy",
-  "Harnit",
-  "Heather",
-  "Helen",
-  "JN",
-  "Laura",
-  "Marie",
-  "Mathis",
-  "Maya",
-  "Mehdi",
-  "Nicolas",
-  "Nik",
-  "Nizar",
-  "Paul",
-  "Priyanka",
-  "Antoine",
-  "Regis"
+  "Abi", "Adele", "Amine", "Antoine", "Cecile", "Chloe", "Corrado", "Fareaha", "Filippo", "Geoffroy", "Harnit", "Heather", "Helen", "JN", "Laura", "Marie", "Mathis", "Maya", "Mehdi", "Nicolas", "Nik", "Nizar", "Paul", "Priyanka", "Antoine", "Regis"
 ];
-
 
 
 var phaserConfig = {
@@ -50,17 +24,22 @@ var pacManScene = new PacManScene(
   owner         = playerName
 );
 
-console.log(messages["gameState:publish"].schema);
-
 
 /********** MAIN *****************/
 
 $(document).ready(()=>{
 
-
   phaserConfig['scene'] = pacManScene;
   var game = new Phaser.Game(phaserConfig);
 
+  console.log(
+    messages["gameState:publish"].isValidMessage(
+      {
+        isOver: "fzq",
+        name: "bla"
+      }
+    )
+  );
 
   // replay button
   $("#btn-replay").on('click', ()=>{
