@@ -135,7 +135,7 @@ class PacManScene extends Phaser.Scene{
     gameState
       .characters.filter( c => {return c.type === "pacman";})
       .forEach(character => {
-        this.createPacMan(character.name, character.id, character.position); // create pacman
+        this.createPacMan(character.name, character.id, character.position, false); // create pacman
       });
 
     // ghosts
@@ -515,15 +515,15 @@ class PacManScene extends Phaser.Scene{
   /**
    * Create PacMan
    */
-  createPacMan(name, id=guid(), initialPosition=undefined){
+  createPacMan(name, id=guid(), initialPosition=undefined, playerHasControl=true){
 
     // ---------------------------------------------------------------------
     // create player 1
     var playerControls = {
-        right: ()=>{return this.cursors.right.isDown},
-        left : ()=>{return this.cursors.left.isDown},
-        up   : ()=>{return this.cursors.up.isDown},
-        down : ()=>{return this.cursors.down.isDown}
+        right: playerHasControl ? ()=>{return this.cursors.right.isDown} : () => {},
+        left : playerHasControl ? ()=>{return this.cursors.left.isDown} : () => {},
+        up   : playerHasControl ? ()=>{return this.cursors.up.isDown} : () => {},
+        down : playerHasControl ? ()=>{return this.cursors.down.isDown} : () => {}
       };
     var playerColor = 0xFFFF00;
 

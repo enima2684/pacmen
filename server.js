@@ -154,7 +154,7 @@ io.on('connection', client => {
 
 
       // Joining an existing game
-      console.log("Joining an existing game !")
+      console.log("Joining an existing game !");
 
       // 1. get the game state and send it to the client
       // -- expect the client to update his internal state
