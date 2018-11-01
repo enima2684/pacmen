@@ -4,6 +4,8 @@
   "description": "Online multiplayer version of Pacman",
   "dependencies": {
     "express": "^4.16.4",
+    "hoek": "^6.0.0",
+    "joi": "^14.0.3",
     "socket.io": "^2.1.1"
   }
 }

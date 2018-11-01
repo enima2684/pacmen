@@ -2,10 +2,15 @@ const express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+const Joi = require('joi');
+
+var Message  = require('./socket/Message').Message;
+var gameStateMessages = require('./socket/gameState/index').messages;
 
 app.use('/assets', express.static('assets'));
 app.use('/js', express.static('js'));
 app.use('/css', express.static('css'));
+app.use('/socket', express.static('socket'));
 
 
 if (!String.prototype.format) {
@@ -28,6 +33,7 @@ app.get('/', function(req, res){
 
 
 
+console.log(gameStateMessages["gameState:publish"].description);
 /**** GAME STATE OBJECT *****/
 
 

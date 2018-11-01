@@ -46,9 +46,11 @@ var playerName = names[Math.floor(names.length * Math.random())];
 var pacManScene = new PacManScene(
   speed         = 150,        // defines the speed of the characters
   safetiles     = [7, 14],    // defines what a wall is
-  gameDuration  = 1.5,     // game duration in minutes
+  gameDuration  = 999,     // game duration in minutes
   owner         = playerName
 );
+
+console.log(messages["gameState:publish"].schema);
 
 
 /********** MAIN *****************/
@@ -59,9 +61,13 @@ $(document).ready(()=>{
   phaserConfig['scene'] = pacManScene;
   var game = new Phaser.Game(phaserConfig);
 
+
   // replay button
   $("#btn-replay").on('click', ()=>{
     pacManScene.replay();
   });
 
 });
+
+
+
